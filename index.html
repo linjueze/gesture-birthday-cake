@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
@@ -503,11 +503,11 @@
   <!-- 步骤条：点燃 → 花束 → 比耶 → 点赞 → 许愿 → 吹灭 -->
   <div class="stepper" id="stepper"></div>
 
-  <!-- 许愿倒计时（3 秒沉浸） -->
+  <!-- 许愿反馈（点「愿你愿望成真！」后播放约 2.8 秒） -->
   <div class="wish-screen" id="wish-screen">
     <div class="wish-kicker">✦ Make a Wish ✦</div>
-    <div class="wish-num" id="wish-num">3</div>
-    <div class="wish-text" id="wish-text">闭上眼睛，默念你的愿望…</div>
+    <div class="wish-num" id="wish-bless">愿你愿望成真</div>
+    <div class="wish-text" id="wish-text">愿望已被星光收藏 ✨</div>
     <div class="wish-track"><i id="wish-bar"></i></div>
   </div>
 
@@ -637,8 +637,7 @@ const TRANSITION = {
 const PEACE_HOLD = 0.7;    // ✌🏻 确认时长（秒）
 const THUMB_HOLD = 0.7;    // 👍🏻 确认时长（秒）
 const FINGER_HOLD = 0.7;   // ☝🏻 比 1 确认时长（秒）
-const PRAY_HOLD = 1.0;     // 🙏🏻 双手合十确认时长（秒）
-const STILL_HOLD = 1.2;    // 单手并拢静止确认时长（秒）
+const WISH_DURATION = 2.8; // 许愿反馈动画时长（秒）
 
 import * as THREE from 'three';
 
@@ -737,11 +736,7 @@ const ritual = {
   holdPeace: 0,
   holdThumb: 0,
   holdFinger: 0,          // ☝🏻 比 1 保持
-  holdPray: 0,            // 🙏🏻 双手合十保持
-  holdStill: 0,           // 单手并拢静止保持
-  wishCx: 0, wishCy: 0,   // 上一帧手掌中心（判断"静止"）
-  wishSeq: 0,             // 3 秒许愿动画进度
-  holdA: 0, holdB: 0,     // 双手姿势的独立保持值
+  wishSeq: 0,             // 许愿反馈动画进度（秒）
   photoOut: 0,            // 照片淡出进度 0..1
   blowScore: 0,           // 持续吹气累计
   leaving: false
@@ -874,184 +869,276 @@ for (let i = 0; i < 500; i++) {
 function buildBouquetTargets(count) {
   const pos = new Float32Array(count * 3);
   const col = new Float32Array(count * 3);
+  const siz = new Float32Array(count);
   let w = 0;
 
-  const put = (x, y, z, c) => {
+  /* ---------------- 配色 ---------------- */
+  const C_DEEP = HEX(0xff4d7d);     // 花心：深绯红
+  const C_ROSE = HEX(0xff8fb1);     // 中层：柔和玫瑰粉
+  const C_CHAMP = HEX(0xffe6c7);    // 花瓣边缘：香槟金 / 奶白
+  const C_STAR = HEX(0xfff7e8);     // 满天星
+  const C_LEAF_A = HEX(0x52b788);   // 尖叶（柔和翡翠绿）
+  const C_LEAF_B = HEX(0x74c69d);
+  const C_PAPER_A = HEX(0xf3cfa4);  // 包装纸（暖香槟金）
+  const C_PAPER_B = HEX(0xd9a46f);  // 包装纸（米白 → 深一档）
+  const C_RIB_A = HEX(0xffcf70);    // 丝带亮金
+  const C_RIB_B = HEX(0xffb45a);    // 丝带暖金
+  const C_STEM = HEX(0x4a8d6b);     // 花茎
+
+  /* ---------------- 布局参数（调花束大小改这里） ---------------- */
+  const DOME_Y = 1.70;        // 花球中心高度
+  const PAPER_TOP_Y = 0.80;   // 包装纸上缘（半托花球）
+  const PAPER_TOP_R = 1.04;
+  const PAPER_BOT_Y = -0.46;
+  const PAPER_BOT_R = 0.13;
+  const BOW_Y = -0.30;        // 丝带 / 蝴蝶结（收腰处，约底部 1/3）
+  const BRIGHT = 0.74;        // 整体亮度（<1 防止叠加混合把颜色冲白）
+  const TILT = 0.21;          // 整束向镜头前倾约 12°
+  const PIVOT_Y = 0.75;       // 倾斜支点（避免整体漂移）
+
+  const cosT = Math.cos(TILT);
+  const sinT = Math.sin(TILT);
+
+  const put = (x, y, z, c, size = 1) => {
     if (w >= count) return;
     const i = w * 3;
-    pos[i] = x; pos[i + 1] = y; pos[i + 2] = z;
-    // 叠加混合下粒子会互相"冲白"，这里整体压一档亮度，让颜色（粉/金/绿）留得住
-    col[i] = clamp01(c[0] * BOUQUET_BRIGHT);
-    col[i + 1] = clamp01(c[1] * BOUQUET_BRIGHT);
-    col[i + 2] = clamp01(c[2] * BOUQUET_BRIGHT);
+    const dy = y - PIVOT_Y;
+    pos[i] = x;
+    pos[i + 1] = dy * cosT - z * sinT + PIVOT_Y;
+    pos[i + 2] = dy * sinT + z * cosT;
+    col[i] = clamp01(c[0] * BRIGHT);
+    col[i + 1] = clamp01(c[1] * BRIGHT);
+    col[i + 2] = clamp01(c[2] * BRIGHT);
+    siz[w] = size;
     w++;
   };
 
-  /* ---------------- 配色 ---------------- */
-  const C_GOLD = HEX(0xffd89b);    // 香槟金
-  const C_ROSE = HEX(0xff8fb1);    // 暖玫瑰粉
-  const C_WHITE = HEX(0xfff2e6);   // 柔白
-  const C_LEAF = HEX(0x8fd9a8);    // 淡翡翠金（叶）
-  const C_STEM = HEX(0x5f9c74);    // 花茎
-  const C_RIBBON = HEX(0xffb45a);  // 暖金丝带
-  const C_PAPER = HEX(0xd9b07a);   // 包装纸
-  const C_PAPER_DARK = HEX(0x8a5a2a);
-
-  /* ---------------- 布局参数 ---------------- */
-  const NECK_Y = 0.62;             // 花茎收口高度
-  const CONE_BOT = -0.55;          // 包装纸底部
-  const CONE_TOP = 0.86;           // 包装纸开口高度
-  const CONE_R = 0.92;             // 包装纸开口半径
-  const BLOOM_Y = 1.62;            // 花朵基准高度
-  const BLOOM_R = 0.50;            // 单朵花半径
-  const SPREAD_R = 0.80;           // 花朵排布半径
-  const BLOOMS = 6;                // 花朵数量（5~7 均可）
-  const BOUQUET_BRIGHT = 0.68;     // 花色整体亮度（<1 防止叠加混合冲白）
-
-  /* ---------------- 花朵中心：斐波那契螺旋 ---------------- */
-  const GA = Math.PI * (3 - Math.sqrt(5));
-  const bloomCenters = [];
-  for (let b = 0; b < BLOOMS; b++) {
-    const t = (b + 0.5) / BLOOMS;
-    const rr = SPREAD_R * Math.sqrt(t);
-    const ang = GA * b;
-    bloomCenters.push({
-      x: Math.cos(ang) * rr,
-      y: BLOOM_Y + 0.34 * (1 - Math.sqrt(t)) + rand(-0.04, 0.04),
-      z: Math.sin(ang) * rr,
-      color: [C_GOLD, C_ROSE, C_WHITE][b % 3]
+  /* ============================================================
+     1. 玫瑰穹顶（≈55%）：中心 1 朵大玫瑰 + 周围 7 朵放射状外倾
+     每朵 = 5 层杯状螺旋花瓣，内层紧卷、外层外翻
+     ============================================================ */
+  const N_ROSE = Math.floor(count * 0.55);
+  const roses = [{ x: 0, y: DOME_Y + 0.34, z: 0, R: 0.58, tilt: 0, dir: 0 }];
+  const RING = 7;
+  for (let i = 0; i < RING; i++) {
+    const a = (i / RING) * Math.PI * 2 + 0.22;
+    roses.push({
+      x: Math.cos(a) * 0.67,
+      y: DOME_Y - 0.12 + (i % 2) * 0.09,
+      z: Math.sin(a) * 0.67,
+      R: 0.44,
+      tilt: 0.30,                 // 向外微倾
+      dir: a
     });
   }
 
-  /* ---------------- 1. 花朵：玫瑰曲线花瓣，三层 ---------------- */
-  const nBloom = Math.floor(count * 0.60);
-  const perBloom = Math.floor(nBloom / BLOOMS);
-  for (const c of bloomCenters) {
-    for (let i = 0; i < perBloom; i++) {
-      const layer = Math.floor(Math.random() * 3);          // 0 内层 → 2 外层
-      const layerR = BLOOM_R * (0.42 + layer * 0.29);
-      const th = Math.random() * Math.PI * 2;
-      const k = 5;                                          // 5 瓣玫瑰曲线
-      const petal = Math.abs(Math.cos(k * th));
-      const rad = layerR * (0.22 + 0.78 * Math.pow(petal, 0.7)) * rand(0.86, 1.06);
-      // 中间高、边缘低的穹顶，外加层间抬升，形成立体分层
-      const lift = (1 - rad / (BLOOM_R * 1.25)) * 0.20 + layer * 0.035;
-      put(
-        c.x + Math.cos(th) * rad,
-        c.y + lift + rand(-0.012, 0.012),
-        c.z + Math.sin(th) * rad,
-        mixC(c.color, C_WHITE, Math.min(0.5, rand(0.04, 0.26) + layer * 0.05))
-      );
+  const roseW = roses.map((_, i) => (i === 0 ? 1.4 : 1));
+  const roseWSum = roseW.reduce((a, b) => a + b, 0);
+
+  const LAYERS = 5;
+  const PETALS = [3, 5, 6, 7, 8];                 // 每层花瓣数：内层少、外层多
+  const layerW = PETALS.map((p, l) => p * (0.55 + 0.45 * l));
+  const layerWSum = layerW.reduce((a, b) => a + b, 0);
+
+  for (let ri = 0; ri < roses.length; ri++) {
+    const rs = roses[ri];
+    const n = Math.round(N_ROSE * roseW[ri] / roseWSum);
+
+    // 外倾旋转轴：垂直于径向
+    const ax = -Math.sin(rs.dir);
+    const az = Math.cos(rs.dir);
+    const ca = Math.cos(rs.tilt);
+    const sa = Math.sin(rs.tilt);
+    const kk = 1 - ca;
+
+    for (let i = 0; i < n; i++) {
+      // 选层：外层花瓣面积大，粒子更密
+      let r = Math.random() * layerWSum;
+      let l = 0;
+      while (l < LAYERS - 1 && r > layerW[l]) { r -= layerW[l]; l++; }
+
+      const P = PETALS[l];
+      const pIdx = Math.floor(Math.random() * P);
+      const u = Math.pow(Math.random(), 0.85);     // 0 花瓣根 → 1 花瓣尖
+      const v = Math.random() * 2 - 1;             // 花瓣横向 -1..1
+
+      /* —— 杯状螺旋花瓣参数方程 —— */
+      const rho0 = rs.R * (0.10 + 0.155 * l);      // 花瓣根部半径
+      const pLen = rs.R * (0.52 + 0.13 * l);       // 花瓣长度
+      const tiltL = 1.30 - l * 0.27;               // 内层近竖直 → 外层外翻
+      const halfW = 0.62 + 0.16 * l;               // 花瓣角宽
+      const phi = (pIdx / P) * Math.PI * 2 + l * 0.85 + rs.dir +
+                  v * halfW * (1 - 0.30 * u);
+
+      const rho = rho0 + u * pLen * Math.cos(tiltL);
+      const ly = u * pLen * Math.sin(tiltL)
+               - (1 - u) * rs.R * 0.06
+               + v * v * rs.R * (0.16 + 0.05 * l); // 两侧上翘 → 杯状
+      const lx = Math.cos(phi) * rho;
+      const lz = Math.sin(phi) * rho;
+
+      /* —— Rodrigues 外倾 —— */
+      const nd = ax * lx + az * lz;
+      const nxp = -az * ly;
+      const nyp = az * lx - ax * lz;
+      const nzp = ax * ly;
+      const rx = lx * ca + nxp * sa + ax * nd * kk;
+      const ry = ly * ca + nyp * sa;
+      const rz = lz * ca + nzp * sa + az * nd * kk;
+
+      /* —— 色阶：花心深绯红 → 中层玫瑰粉 → 花瓣边缘香槟金 —— */
+      const tt = l / (LAYERS - 1);
+      const base = mixC(C_DEEP, C_ROSE, Math.min(1, tt * 1.55));
+      const edge = Math.pow(u, 1.6) * (0.22 + 0.78 * tt);
+      const c = mixC(base, C_CHAMP, edge * 0.85);
+
+      put(rs.x + rx, rs.y + ry, rs.z + rz, jitC(c, 0.025), 1.16);
     }
   }
 
-  /* ---------------- 2. 花茎：从收口到每朵花的贝塞尔曲线 ---------------- */
-  const nStem = Math.floor(count * 0.06);
-  const stemPer = Math.max(1, Math.floor(nStem / BLOOMS));
-  for (const c of bloomCenters) {
-    const p0 = { x: 0, y: NECK_Y, z: 0 };
-    const p2 = { x: c.x * 0.92, y: c.y - 0.20, z: c.z * 0.92 };
-    const p1 = { x: c.x * 0.30, y: (NECK_Y + c.y) * 0.5, z: c.z * 0.30 };
-    for (let i = 0; i < stemPer; i++) {
-      const t = Math.random(), mt = 1 - t;
-      put(
-        mt * mt * p0.x + 2 * mt * t * p1.x + t * t * p2.x + rand(-0.016, 0.016),
-        mt * mt * p0.y + 2 * mt * t * p1.y + t * t * p2.y + rand(-0.016, 0.016),
-        mt * mt * p0.z + 2 * mt * t * p1.z + t * t * p2.z + rand(-0.016, 0.016),
-        mixC(C_STEM, C_LEAF, Math.random() * 0.5)
-      );
-    }
-  }
-
-  /* ---------------- 3. 叶子 ---------------- */
-  const nLeaf = Math.floor(count * 0.05);
-  const leafCount = 6;
-  const leafPer = Math.max(1, Math.floor(nLeaf / leafCount));
-  for (let li = 0; li < leafCount; li++) {
-    const a = (li / leafCount) * Math.PI * 2 + 0.4;
-    const lx = Math.cos(a) * 0.40;
-    const lz = Math.sin(a) * 0.40;
-    const ly = NECK_Y + 0.34 + (li % 3) * 0.26;
-    const len = 0.36, wid = 0.13;
-    const dirx = Math.cos(a), dirz = Math.sin(a);
-    for (let i = 0; i < leafPer; i++) {
-      const u = Math.random();                               // 0 叶根 → 1 叶尖
-      const halfW = Math.pow(Math.sin(Math.PI * u), 0.75) * wid;
-      const v = rand(-halfW, halfW);
-      put(
-        lx + dirx * u * len - dirz * v,
-        ly + u * 0.20 + Math.abs(v) * 0.25,                  // 叶片微微上翘
-        lz + dirz * u * len + dirx * v,
-        mixC(C_LEAF, C_STEM, Math.random() * 0.45)
-      );
-    }
-  }
-
-  /* ---------------- 4. 锥形包装纸 ---------------- */
-  const nWrap = Math.floor(count * 0.18);
-  for (let i = 0; i < nWrap; i++) {
-    const t = Math.pow(Math.random(), 0.85);                 // 底部略密
-    const y = CONE_BOT + t * (CONE_TOP - CONE_BOT);
-    const r = 0.10 + (CONE_R - 0.10) * Math.pow(t, 1.15);
+  /* ============================================================
+     2. 满天星 + 尖叶（≈10%）
+     ============================================================ */
+  const N_STAR = Math.floor(count * 0.062);
+  for (let i = 0; i < N_STAR; i++) {
     const a = Math.random() * Math.PI * 2;
-    const crease = 1 + 0.055 * Math.sin(a * 7 + t * 4);      // 纸张褶皱
+    const rr = 0.55 + Math.random() * 0.55;
     put(
-      Math.cos(a) * r * crease,
-      y + rand(-0.008, 0.008),
-      Math.sin(a) * r * crease,
-      mixC(C_PAPER, C_PAPER_DARK, Math.random() * 0.55)
+      Math.cos(a) * rr,
+      DOME_Y + rand(-0.55, 0.55) - rr * 0.12,
+      Math.sin(a) * rr,
+      mulC(C_STAR, rand(0.82, 1.0)),
+      rand(0.85, 1.2)
     );
   }
 
-  /* ---------------- 5. 腰封丝带 + 蝴蝶结 ---------------- */
-  const nRib = Math.floor(count * 0.06);
-  const bandN = Math.floor(nRib * 0.42);
-  for (let i = 0; i < bandN; i++) {
-    const a = Math.random() * Math.PI * 2;
-    const r = 0.175 + Math.sin(a * 3) * 0.008;
-    put(Math.cos(a) * r, NECK_Y - 0.16 + rand(-0.02, 0.02), Math.sin(a) * r, C_RIBBON);
-  }
-  const bowY = NECK_Y - 0.14, bowZ = 0.19;
-  for (let i = 0; i < nRib - bandN; i++) {
-    const side = (i % 2 === 0) ? -1 : 1;
-    if (i % 3 === 0) {
-      // 飘带：从结心垂下来
-      const t = Math.random();
+  const N_LEAF = Math.floor(count * 0.038);
+  const LEAVES = 7;
+  for (let li = 0; li < LEAVES; li++) {
+    const a = (li / LEAVES) * Math.PI * 2 + 0.55;
+    const bx = Math.cos(a) * 0.56;
+    const bz = Math.sin(a) * 0.56;
+    const by = DOME_Y - 0.58 + (li % 2) * 0.09;
+    const len = 0.58, wid = 0.17, up = 0.46;
+    const dx = Math.cos(a);
+    const dz = Math.sin(a);
+    const per = Math.floor(N_LEAF / LEAVES);
+    for (let i = 0; i < per; i++) {
+      const u = Math.random();
+      // 尖叶轮廓：中段最宽、叶尖收拢
+      const halfW = Math.pow(Math.sin(Math.PI * Math.pow(u, 0.82)), 0.85) * wid;
+      const v = rand(-halfW, halfW);
       put(
-        side * (0.09 + t * 0.05),
-        bowY - t * 0.44,
-        bowZ + 0.02 + t * 0.07,
-        mulC(C_RIBBON, rand(0.8, 1.0))
-      );
-    } else {
-      // 蝴蝶结的环
-      const t = Math.random() * Math.PI * 2;
-      put(
-        side * (0.10 + Math.cos(t) * 0.155),
-        bowY + Math.sin(t) * 0.098,
-        bowZ + Math.sin(t) * 0.04,
-        C_RIBBON
+        bx + dx * u * len - dz * v,
+        by + u * up * len + Math.abs(v) * 0.32,
+        bz + dz * u * len + dx * v,
+        mixC(C_LEAF_A, C_LEAF_B, Math.random()),
+        1.12
       );
     }
   }
 
-  /* ---------------- 6. 外围轻柔星光（补齐剩余名额） ---------------- */
+  /* ============================================================
+     3. 多层包装纸（≈17.5%）：下窄上宽的倒锥，上缘波浪折边
+     ============================================================ */
+  const N_PAPER = Math.floor(count * 0.175);
+  for (let layer = 0; layer < 2; layer++) {
+    const outer = layer === 0;
+    const yTop = PAPER_TOP_Y + (outer ? 0 : -0.12);
+    const rTop = PAPER_TOP_R * (outer ? 1 : 0.84);
+    const half = Math.floor(N_PAPER / 2);
+    for (let i = 0; i < half; i++) {
+      const t = Math.pow(Math.random(), 0.9);      // 0 底 → 1 上缘
+      const a = Math.random() * Math.PI * 2;
+      let r = PAPER_BOT_R + (rTop - PAPER_BOT_R) * Math.pow(t, 1.25);
+      r *= 1 + Math.sin(a * 6 + (outer ? 0 : 0.6)) * 0.055 * t;   // 波浪褶皱
+      const y = PAPER_BOT_Y + t * (yTop - PAPER_BOT_Y)
+              + Math.sin(a * 6) * 0.04 * t * t;                    // 上缘起伏
+      put(Math.cos(a) * r, y, Math.sin(a) * r,
+        mixC(C_PAPER_B, C_PAPER_A, t), outer ? 1.45 : 1.32);
+    }
+  }
+  // 上缘加密：勾出清晰的纸口轮廓
+  const N_RIM = Math.floor(count * 0.014);
+  for (let i = 0; i < N_RIM; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const r = PAPER_TOP_R * (1 + 0.055 * Math.sin(a * 6));
+    put(Math.cos(a) * r, PAPER_TOP_Y + Math.sin(a * 6) * 0.04, Math.sin(a) * r,
+      mixC(C_PAPER_A, C_CHAMP, 0.55), 1.6);
+  }
+
+  /* ============================================================
+     4. 丝带环 + 双耳蝴蝶结 + 两条飘带（≈7.5%）
+     ============================================================ */
+  const N_RIB = Math.floor(count * 0.075);
+  const bandN = Math.floor(N_RIB * 0.42);
+  for (let i = 0; i < bandN; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const r = 0.168 + 0.012 * Math.sin(a * 4);
+    put(Math.cos(a) * r, BOW_Y + rand(-0.038, 0.038), Math.sin(a) * r,
+      mixC(C_RIB_A, C_RIB_B, Math.random()), 1.25);
+  }
+  for (let i = 0; i < N_RIB - bandN; i++) {
+    const side = i % 2 === 0 ? -1 : 1;
+    if (i % 5 === 0) {
+      // 飘带：从结心自然下垂、微微外弯
+      const t = Math.random();
+      put(
+        side * (0.06 + Math.sin(t * 2.2) * 0.10 + t * 0.02),
+        BOW_Y - 0.10 - t * 0.60,
+        0.20 + t * 0.05,
+        mixC(C_RIB_B, C_RIB_A, Math.random() * 0.55),
+        1.0
+      );
+    } else {
+      // 双耳：两个椭环
+      const t = Math.random() * Math.PI * 2;
+      put(
+        side * (0.085 + Math.cos(t) * 0.165),
+        BOW_Y + Math.sin(t) * 0.118,
+        0.195 + Math.sin(t) * 0.05,
+        C_RIB_A,
+        1.2
+      );
+    }
+  }
+
+  /* ============================================================
+     5. 花茎：收腰下方整齐聚拢的几根细茎（≈7.5%）
+     ============================================================ */
+  const N_STEM = Math.floor(count * 0.075);
+  const STEM_N = 6;
+  for (let s = 0; s < STEM_N; s++) {
+    const a = (s / STEM_N) * Math.PI * 2 + 0.3;
+    const sx = Math.cos(a) * 0.10, sz = Math.sin(a) * 0.10;
+    const ex = Math.cos(a) * 0.048, ez = Math.sin(a) * 0.048;
+    const per = Math.floor(N_STEM / STEM_N);
+    for (let i = 0; i < per; i++) {
+      const t = Math.random();
+      put(
+        sx + (ex - sx) * t + rand(-0.007, 0.007),
+        PAPER_BOT_Y - 0.02 - t * 0.60,
+        sz + (ez - sz) * t + rand(-0.007, 0.007),
+        mixC(C_STEM, HEX(0x6aa87f), Math.random() * 0.5),
+        0.8
+      );
+    }
+  }
+
+  /* ============================================================
+     6. 克制的漂浮星光（补齐剩余）：远一点、暗一点，不遮挡轮廓
+     ============================================================ */
   let guard = 0;
   while (w < count && guard < count * 2) {
     guard++;
     const a = Math.random() * Math.PI * 2;
-    const r = rand(1.0, 1.9);
-    put(
-      Math.cos(a) * r,
-      rand(-0.4, 2.4),
-      Math.sin(a) * r,
-      mulC(C_GOLD, rand(0.30, 0.75))
-    );
+    const r = rand(1.45, 2.15);
+    put(Math.cos(a) * r, rand(-0.5, 2.5), Math.sin(a) * r,
+      mulC(C_STAR, rand(0.22, 0.5)), rand(0.7, 1.05));
   }
-  // 极端情况下的兜底（理论上不会走到）
-  while (w < count) put(0, 0, 0, C_GOLD);
+  while (w < count) put(0, 0, 0, C_STAR, 0.6);
 
-  return { pos, col, filled: w };
+  return { pos, col, size: siz, filled: w };
 }
 
 const PARTICLE_N = buf.pos.length / 3;
@@ -1067,6 +1154,7 @@ cakeGeo.setAttribute('aFlame', new THREE.Float32BufferAttribute(buf.flame, 1));
 // 花束目标：静态数据，创建时上传一次即可
 cakeGeo.setAttribute('aBouquet', new THREE.BufferAttribute(bouquetTargets.pos, 3));
 cakeGeo.setAttribute('aBouquetColor', new THREE.BufferAttribute(bouquetTargets.col, 3));
+cakeGeo.setAttribute('aBouquetSize', new THREE.BufferAttribute(bouquetTargets.size, 1));
 
 /* ============================================================================
    4. 着色器
@@ -1091,6 +1179,7 @@ attribute float aSeed;
 attribute float aFlame;
 attribute vec3 aBouquet;        // 花束形态目标坐标
 attribute vec3 aBouquetColor;   // 花束形态颜色
+attribute float aBouquetSize;   // 花束形态下的尺寸倍率（花瓣 1.0 / 满天星小点 / 纸边更实）
 
 varying vec3 vColor;
 varying float vAlpha;
@@ -1163,6 +1252,8 @@ void main() {
   col *= 1.0 + s * 0.12;
 
   sizeMul *= 1.0 + uBurst * 0.55;
+  /* 花束模式使用各自的尺寸倍率：满天星更小、包装纸边缘更实 */
+  sizeMul *= mix(1.0, aBouquetSize, uBouquet);
 
   vec4 mv = modelViewMatrix * vec4(pos, 1.0);
   gl_Position = projectionMatrix * mv;
@@ -1172,7 +1263,7 @@ void main() {
 
   alpha *= mix(1.0, 0.78, s);
   /* 花束模式整体降低单粒子权重：密集叠加时颜色才不会一起冲成白色 */
-  alpha *= mix(1.0, 0.52, uBouquet);
+  alpha *= mix(1.0, 0.62, uBouquet);
   vColor = col;
   vAlpha = alpha;
   vBouquet = uBouquet;
@@ -1614,7 +1705,6 @@ const viewerCapText = $('viewer-cap-text');
 const viewerCapIdx = $('viewer-cap-idx');
 const photoTipEl = $('photo-tip');
 const wishScreenEl = $('wish-screen');
-const wishNumEl = $('wish-num');
 const wishTextEl = $('wish-text');
 const wishBarEl = $('wish-bar');
 
@@ -1784,7 +1874,7 @@ async function startCamera() {
         locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${f}`
       });
       hands.setOptions({
-        maxNumHands: 2,          // 许愿环节需要"双手合十"，最多识别 2 只手
+        maxNumHands: 1,          // 许愿改为纯点击，恢复单只手以省性能、防误触
         modelComplexity: 0,
         minDetectionConfidence: 0.6,
         minTrackingConfidence: 0.55,
@@ -1847,7 +1937,6 @@ function onHandResults(results) {
   drawOverlay(results);
 
   const list = results.multiHandLandmarks || [];
-  lastHandList = list;
   gesture.handCount = list.length;
 
   if (list.length === 0) {
@@ -1858,8 +1947,6 @@ function onHandResults(results) {
     ritual.holdPeace *= 0.92;
     ritual.holdThumb *= 0.92;
     ritual.holdFinger *= 0.92;
-    ritual.holdPray *= 0.92;
-    ritual.holdStill *= 0.92;
     if (performance.now() - gesture.lastSeen > 800) {
       setStatus('未检测到手 · 可继续用鼠标操作');
       barOpen.style.width = (state.spread * 100) + '%';
@@ -1874,7 +1961,6 @@ function onHandResults(results) {
 }
 
 let lastHandTime = 0;
-let lastHandList = [];
 const pct = v => Math.round(clamp01(v) * 100);
 
 function analyzeHand(lm) {
@@ -1960,13 +2046,7 @@ function analyzeHand(lm) {
     } else if (ritual.stage === 'lit') {
       label = '比个 1 ☝🏻 变出花束';
     } else if (ritual.stage === 'gathered') {
-      if (gesture.handCount >= 2 && ritual.holdPray > 0) {
-        label = `检测到：双手合十 🙏🏻 · 保持 ${pct(ritual.holdPray / PRAY_HOLD)}%`;
-      } else if (ritual.holdStill > 0) {
-        label = `检测到：许愿手 · 静止 ${pct(ritual.holdStill / STILL_HOLD)}%`;
-      } else {
-        label = '双手合十 🙏🏻 或单手并拢静止，开始许愿';
-      }
+      label = '闭上眼睛，默念你的心愿 · 点下方按钮许愿';
     } else if (gesture.pinch > 0.62) {
       label = `检测到：捏合 · 拉近 ${Math.round(gesture.pinch * 100)}%`;
     } else if (gesture.openness > 0.74) {
@@ -2023,62 +2103,7 @@ function updateRitualGestures(dt) {
     }
   }
 
-  // ⑤ 双手合十 / 单手并拢静止 → 进入许愿
-  if (ritual.stage === 'gathered') updateWishPose(dt);
-}
-
-/* ---------- 12.4 许愿手势：🙏🏻 双手合十 / 单手并拢静止 ---------- */
-function palmSize(h) {
-  return Math.max(0.02, Math.hypot(h[0].x - h[9].x, h[0].y - h[9].y));
-}
-
-function updateWishPose(dt) {
-  const list = lastHandList;
-  let pray = false;
-  let still = false;
-
-  // —— 双手合十：两手掌心靠近 + 指尖朝上 ——
-  if (list.length >= 2) {
-    const a = list[0], b = list[1];
-    const palm = (palmSize(a) + palmSize(b)) * 0.5;
-    const ax = (a[0].x + a[9].x) * 0.5, ay = (a[0].y + a[9].y) * 0.5;
-    const bx = (b[0].x + b[9].x) * 0.5, by = (b[0].y + b[9].y) * 0.5;
-    const near = Math.hypot(ax - bx, ay - by) / palm < 2.2;
-    const upA = a[12].y < a[0].y - 0.03;
-    const upB = b[12].y < b[0].y - 0.03;
-    pray = near && upA && upB;
-  }
-
-  // —— 单手兼容：五指并拢、竖直、几乎不动 ——
-  if (list.length === 1) {
-    const h = list[0];
-    const palm = palmSize(h);
-    const d = (i, j) => Math.hypot(h[i].x - h[j].x, h[i].y - h[j].y);
-    const ext = d(8, 0) > d(6, 0) * 1.12 && d(12, 0) > d(10, 0) * 1.12 &&
-                d(16, 0) > d(14, 0) * 1.12 && d(20, 0) > d(18, 0) * 1.12;
-    const span = d(8, 20) / palm;                 // 食指-小指的张开度
-    const vertical = h[12].y < h[0].y - 0.03;
-    const cx = (h[0].x + h[9].x) * 0.5;
-    const cy = (h[0].y + h[9].y) * 0.5;
-    const moved = Math.hypot(cx - ritual.wishCx, cy - ritual.wishCy);
-    ritual.wishCx = cx;
-    ritual.wishCy = cy;
-    still = ext && span < 1.45 && vertical && moved < 0.02;
-  } else {
-    ritual.wishCx = 0;
-    ritual.wishCy = 0;
-  }
-
-  ritual.holdPray = pray ? ritual.holdPray + dt : 0;
-  ritual.holdStill = still ? ritual.holdStill + dt : 0;
-
-  if (ritual.holdPray >= PRAY_HOLD) {
-    ritual.holdPray = 0;
-    startWish('双手合十');
-  } else if (ritual.holdStill >= STILL_HOLD) {
-    ritual.holdStill = 0;
-    startWish('单手许愿');
-  }
+  // ⑤ 许愿改为纯点击交互，这里不再做手势识别
 }
 
 function drawOverlay(results) {
@@ -2449,10 +2474,6 @@ function gatherBack(source) {
   ritual.stage = 'gathered';
   ritual.t = 0;
   ritual.holdThumb = 0;
-  ritual.holdPray = 0;
-  ritual.holdStill = 0;
-  ritual.wishCx = 0;
-  ritual.wishCy = 0;
 
   state.spreadTarget = 0;
   state.bouquetTarget = 0;        // 花束 → 蛋糕
@@ -2466,18 +2487,16 @@ function gatherBack(source) {
   canvas.style.cursor = 'grab';
   closeViewer();
 
-  setStatus(`点赞成功 👍🏻 蛋糕回来了（${source}）· 双手合十 🙏🏻 许愿`, true);
+  setStatus(`点赞成功 👍🏻 蛋糕回来了（${source}）· 闭上眼睛，许个愿吧`, true);
   syncRitualUI();
 }
 
-/** ⑤ 许愿：3 秒沉浸动画 */
+/** ⑤ 许愿：点按钮触发一段柔和反馈动画（无手势） */
 function startWish(source) {
   if (ritual.stage !== 'gathered' || ritual.leaving) return;
   ritual.stage = 'wishing';
   ritual.t = 0;
   ritual.wishSeq = 0;
-  ritual.holdPray = 0;
-  ritual.holdStill = 0;
   ritual.wishTarget = 1;          // 暖金许愿光尘螺旋上升
   ritual.wishT = 0;
 
@@ -2485,20 +2504,27 @@ function startWish(source) {
   state.autoSpeed = 0.35;         // 放慢旋转
 
   wishScreenEl.classList.add('show');
-  wishNumEl.textContent = '3';
-  wishTextEl.textContent = '闭上眼睛，默念你的愿望…';
+  if (wishTextEl) wishTextEl.textContent = '愿望已被星光收藏 ✨';
   wishBarEl.style.width = '0%';
 
-  setStatus(`许愿中（${source}）· 闭上眼睛，默念你的愿望`, true);
+  setStatus(`许愿中（${source}）· 闭上眼睛，默念你的心愿`, true);
   syncRitualUI();
 }
 
-/** ⑤→⑥ 许愿完成 */
+/** ⑤→⑥ 许愿完成：光环/光尘必须彻底归零，绝不带进吹蜡烛阶段 */
 function finishWish() {
   if (ritual.stage !== 'wishing') return;
   ritual.stage = 'ready';
   ritual.t = 0;
-  ritual.wishTarget = 0.25;
+
+  // 关掉许愿专属特效
+  ritual.wishTarget = 0;
+  ritual.wish = 0;
+  for (const ring of wishRings) {
+    ring.material.opacity = 0;
+    ring.visible = false;
+  }
+
   state.distTarget = 6.4;
   state.autoSpeed = 1;
 
@@ -2520,9 +2546,15 @@ function blowOut(source) {
   ritual.smoke = 1;
   ritual.smokeT = 0;
   ritual.burstTarget = 1;
-  ritual.wishTarget = 0.25;
+  ritual.wishTarget = 0;
   ritual.air = 0;
   stopMic();
+
+  // 兜底：确保许愿光环已彻底隐藏（正常流程在 finishWish 里已清）
+  for (const ring of wishRings) {
+    ring.material.opacity = 0;
+    ring.visible = false;
+  }
 
   document.body.classList.add('celebrating');
   setStatus(`蜡烛已吹灭（${source}）· 愿望已寄出`, true);
@@ -2588,13 +2620,13 @@ function syncRitualUI() {
         <span class="ritual-tip">拇指向上、四指收拢，保持 0.7 秒</span>`;
       break;
     case 'gathered':
-      html = `<span class="ritual-label">⑤ 双手合十 🙏🏻 许愿</span>
-        <button class="btn primary" data-act="wish">双手合十 / 闭眼许愿</button>
-        <span class="ritual-tip">双手合十 1 秒，或单手五指并拢静止 1.2 秒</span>`;
+      html = `<span class="ritual-label">⑤ 闭上眼睛，默念你的心愿</span>
+        <button class="btn primary" data-act="wish">愿你愿望成真！</button>
+        <span class="ritual-tip">许下心愿后进入最后一步：吹灭蜡烛</span>`;
       break;
     case 'wishing':
       html = `<span class="ritual-label">许愿中…</span>
-        <span class="ritual-tip">闭上眼睛，默念你的愿望</span>`;
+        <span class="ritual-tip">愿望会被星光带走</span>`;
       break;
     case 'ready':
       html = `<span class="ritual-label">⑥ 吹灭蜡烛</span>
@@ -2721,28 +2753,31 @@ function animate() {
   }
   ritual.wish = damp(ritual.wish, ritual.wishTarget, 1.2, dt);
 
-  /* ---- ⑤ 许愿：3 秒沉浸倒计时 ---- */
+  /* ---- ⑤ 许愿：柔和反馈动画（纯点击触发，无手势） ---- */
   if (ritual.stage === 'wishing') {
     ritual.wishSeq += dt;
-    const p = clamp01(ritual.wishSeq / 3);
-    const n = Math.min(3, Math.max(1, Math.ceil(3 - ritual.wishSeq)));
-    if (wishNumEl.textContent !== String(n)) wishNumEl.textContent = String(n);
-    wishBarEl.style.width = (p * 100) + '%';
-    if (ritual.wishSeq >= 3) finishWish();
+    wishBarEl.style.width = (clamp01(ritual.wishSeq / WISH_DURATION) * 100) + '%';
+    if (ritual.wishSeq >= WISH_DURATION) finishWish();
   }
 
-  /* ---- 许愿光环：从地面缓缓升起、渐隐 ---- */
-  if (ritual.wish > 0.02) {
-    for (let i = 0; i < wishRings.length; i++) {
-      const ring = wishRings[i];
-      const ph = (ritual.wishSeq / 3 + i * 0.5) % 1;
+  /* ---- 许愿光环：只在 wishing 阶段渲染 ----
+     离开该阶段后立刻停止位置更新，透明度归零并隐藏，绝不带进吹蜡烛画面 */
+  const wishing = ritual.stage === 'wishing';
+  for (let i = 0; i < wishRings.length; i++) {
+    const ring = wishRings[i];
+    if (wishing) {
+      const ph = (ritual.wishSeq / WISH_DURATION + i * 0.5) % 1;
       ring.visible = true;
       ring.position.y = -0.35 + ph * 2.9;
       ring.scale.setScalar(0.75 + ph * 0.55);
-      ring.material.opacity = Math.sin(ph * Math.PI) * 0.5 * clamp01(ritual.wish);
+      ring.material.opacity = Math.sin(ph * Math.PI) * 0.5;
+    } else if (ring.visible) {
+      ring.material.opacity = Math.max(0, ring.material.opacity - dt * 6);
+      if (ring.material.opacity <= 0.01) {
+        ring.material.opacity = 0;
+        ring.visible = false;
+      }
     }
-  } else {
-    for (const ring of wishRings) ring.visible = false;
   }
 
   /* ---- 麦克风吹气（只在"待吹灭"阶段生效） ---- */
@@ -2930,7 +2965,7 @@ window.__cakeDebug = {
   CARD_URL, MEMORY_PHOTOS, photoGroup, photos,
   igniteCandle, bouquetMorph, posePhotos, gatherBack, startWish, finishWish, blowOut, openViewer,
   enableMic, detectBlow, classifyBlow, MIC,
-  bouquetTargets,
+  bouquetTargets, wishRings,
   micOn: () => micOn,
   micState: () => micOn ? { state: audioCtx?.state, rms: +MIC.rms.toFixed(4), flat: +MIC.flatness.toFixed(3), low: +MIC.lowRatio.toFixed(3), level: +MIC.level.toFixed(3) } : null
 };
