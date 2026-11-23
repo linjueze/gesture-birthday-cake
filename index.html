@@ -273,96 +273,6 @@
   .photo-tip.show{opacity:1;transform:translate(-50%,-160%) scale(1)}
 
   /* ============================================================
-     照片灯箱
-     ============================================================ */
-  .viewer{
-    position:fixed;inset:0;z-index:6;display:flex;align-items:center;justify-content:center;
-    background:radial-gradient(ellipse 70% 60% at 50% 45%,rgba(10,8,6,.62),rgba(3,3,6,.9));
-    backdrop-filter:blur(14px) saturate(130%);
-    -webkit-backdrop-filter:blur(14px) saturate(130%);
-    opacity:0;pointer-events:none;transition:opacity .45s ease;
-  }
-  .viewer.show{opacity:1;pointer-events:auto}
-
-  .viewer-inner{
-    display:flex;flex-direction:column;align-items:center;gap:16px;
-    transform:translateY(10px) scale(.98);
-    transition:transform .5s cubic-bezier(.2,.85,.25,1);
-  }
-  .viewer.show .viewer-inner{transform:translateY(0) scale(1)}
-
-  .viewer-frame{position:relative;display:flex;align-items:center;justify-content:center}
-
-  .viewer-stage{
-    position:relative;width:min(720px,78vw);aspect-ratio:3/2;
-    border-radius:24px;padding:10px;
-    background:linear-gradient(150deg,#f6e8d2,#cfae7e 55%,#a8825a);
-    box-shadow:
-      0 40px 100px rgba(0,0,0,.75),
-      0 0 0 1px rgba(255,226,182,.35),
-      inset 0 1px 0 rgba(255,255,255,.55);
-  }
-  .viewer-stage .viewer-photo{
-    position:relative;width:100%;height:100%;border-radius:16px;overflow:hidden;
-    background:#120e0a;box-shadow:inset 0 0 40px rgba(0,0,0,.55);
-  }
-  .viewer-stage img{
-    width:100%;height:100%;object-fit:cover;display:block;
-    opacity:0;transform:scale(1.02);
-    transition:opacity .55s ease,transform .9s cubic-bezier(.2,.8,.2,1);
-  }
-  .viewer-stage img.loaded{opacity:1;transform:scale(1)}
-  .viewer-skel{
-    position:absolute;inset:0;
-    background:linear-gradient(100deg,#1a140e 20%,#2b2116 40%,#1a140e 60%);
-    background-size:220% 100%;
-    animation:shimmer 1.4s linear infinite;
-    transition:opacity .4s ease;
-  }
-  .viewer-skel.hide{opacity:0}
-  @keyframes shimmer{0%{background-position:120% 0}100%{background-position:-120% 0}}
-  .viewer-fallback{
-    position:absolute;inset:0;display:none;place-items:center;font-size:54px;
-    color:rgba(255,226,190,.8);
-    background:radial-gradient(circle at 50% 45%,#4a2c14,#1a120c 78%);
-  }
-
-  .viewer-nav{
-    position:absolute;top:50%;margin-top:-23px;z-index:2;
-    width:46px;height:46px;border-radius:50%;flex:none;
-    border:1px solid rgba(255,207,138,.30);background:rgba(16,12,9,.55);
-    color:#ffeacb;font-size:22px;line-height:1;cursor:pointer;
-    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
-    box-shadow:0 8px 24px rgba(0,0,0,.45);
-    transition:background .2s,transform .15s,border-color .2s;
-  }
-  .viewer-nav[data-v="prev"]{left:14px}
-  .viewer-nav[data-v="next"]{right:14px}
-  .viewer-nav:hover{background:rgba(255,214,160,.2);border-color:rgba(255,207,138,.5)}
-  .viewer-nav:active{transform:scale(.93)}
-
-  .viewer-close{
-    position:absolute;top:22px;right:26px;width:42px;height:42px;border-radius:50%;
-    border:1px solid rgba(255,207,138,.28);background:rgba(20,16,12,.6);
-    color:#ffeacb;font-size:16px;cursor:pointer;line-height:1;
-    transition:background .2s,transform .15s;
-  }
-  .viewer-close:hover{background:rgba(255,214,160,.18)}
-  .viewer-close:active{transform:scale(.94)}
-
-  .viewer-cap{
-    display:flex;align-items:center;gap:12px;
-    max-width:min(720px,78vw);
-    font-size:14px;letter-spacing:.05em;color:rgba(255,238,216,.9);
-    text-align:center;
-  }
-  .viewer-idx{
-    flex:none;font-size:11px;letter-spacing:.14em;color:rgba(255,226,190,.42);
-    font-variant-numeric:tabular-nums;
-  }
-  .viewer-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center}
-
-  /* ============================================================
      庆祝转场
      ============================================================ */
   .gift-card{
@@ -472,12 +382,6 @@
     .gift-card{padding:26px 20px 20px;border-radius:22px}
     .gift-note{font-size:12.5px}
     .gift-btn{padding:13px 26px;font-size:13.5px}
-    .viewer-stage{width:88vw;padding:7px;border-radius:20px}
-    .viewer-nav{width:36px;height:36px;font-size:18px;margin-top:-18px}
-    .viewer-nav[data-v="prev"]{left:10px}
-    .viewer-nav[data-v="next"]{right:10px}
-    .viewer-close{top:14px;right:14px;width:38px;height:38px}
-    .viewer-cap{font-size:12px;max-width:88vw}
   }
   @media (max-height:640px){
     .cam-card{width:150px}
@@ -485,7 +389,6 @@
     .status{display:none}
     .ritual{bottom:96px}
     .gift-card{padding:24px 22px 18px}
-    .viewer-stage{width:62vw}
   }
 </style>
 </head>
@@ -546,32 +449,6 @@
 
 <!-- 悬停照片时的 caption 胶囊 -->
 <div class="photo-tip" id="photo-tip"></div>
-
-<!-- 照片灯箱 -->
-<div class="viewer" id="viewer">
-  <button class="viewer-close" data-v="close" aria-label="关闭">✕</button>
-  <div class="viewer-inner">
-    <div class="viewer-frame">
-      <button class="viewer-nav" data-v="prev" aria-label="上一张">‹</button>
-      <div class="viewer-stage">
-        <div class="viewer-photo">
-          <div class="viewer-skel" id="viewer-skel"></div>
-          <img id="viewer-img" alt="" />
-          <div class="viewer-fallback" id="viewer-fallback">✦</div>
-        </div>
-      </div>
-      <button class="viewer-nav" data-v="next" aria-label="下一张">›</button>
-    </div>
-    <div class="viewer-cap">
-      <span id="viewer-cap-text"></span>
-      <span class="viewer-idx" id="viewer-cap-idx"></span>
-    </div>
-    <div class="viewer-bar">
-      <button class="btn" data-v="gather">👍🏻 回到蛋糕</button>
-      <button class="btn ghost" data-v="close">关闭</button>
-    </div>
-  </div>
-</div>
 
 <!-- 吹灭蜡烛后：祝福卡片 -->
 <div class="gift-card" id="gift-card">
@@ -1515,12 +1392,74 @@ const photoGroup = new THREE.Group();
 photoGroup.visible = false;
 scene.add(photoGroup);
 
-const CARD_W = 512;
-const CARD_H = 400;
-const CARD_GEO = new THREE.PlaneGeometry(1.42, 1.11);
+/* ============================================================================
+   7. 3D 拍立得照片星环
+   ---------------------------------------------------------------------------
+   · 2× 高清画布 1024×820，各向异性过滤，近景文字锐利
+   · 实体厚相纸：香槟金背板 + 象牙白纸纹 + 内凹压痕 + 烫金细线
+   · 照片电影感调色（暖金柔光 + 椭圆暗角）+ 光面覆膜扫光
+   · 点击任意照片 → 飞到镜头正前方特写，其余后退淡化
+   ========================================================================== */
+const CARD_W = 1024;
+const CARD_H = 820;
+/** 卡片在世界里的尺寸（宽高比与画布一致） */
+const CARD_SIZE_W = 1.42;
+const CARD_SIZE_H = CARD_SIZE_W * (CARD_H / CARD_W);      // ≈ 1.137
+const CARD_GEO = new THREE.PlaneGeometry(CARD_SIZE_W, CARD_SIZE_H);
+
+/** 相片区几何（画布像素） */
+const PAD = 44;
+const PH_X = PAD;
+const PH_Y = PAD;
+const PH_W = CARD_W - PAD * 2;        // 936
+const PH_H = 568;
+const CAP_Y = 704;                    // 底部留白区的配文基线
+
+const FOCUS_DIST = 2.45;              // 特写时卡片到相机的距离
+const FOCUS_SCALE = 1.58;             // 特写放大倍率
 
 const photos = [];
 let photosActive = false;
+let focusedCard = null;               // 正在特写的那张
+
+/* ---------------- 纸纹颗粒（一次性生成，平铺使用） ---------------- */
+function makeGrainCanvas() {
+  const s = 256;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = s;
+  const ctx = cv.getContext('2d');
+  const img = ctx.createImageData(s, s);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const v = 128 + (Math.random() - 0.5) * 30;
+    d[i] = d[i + 1] = d[i + 2] = v;
+    d[i + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  return cv;
+}
+const paperGrain = makeGrainCanvas();
+
+/* ---------------- 光面扫光贴图（每张卡一份，便于各自错相位） ---------------- */
+function makeSheenTexture() {
+  const s = 256;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = s;
+  const ctx = cv.getContext('2d');
+  const g = ctx.createLinearGradient(0, 0, s, s);
+  g.addColorStop(0.00, 'rgba(255,255,255,0)');
+  g.addColorStop(0.36, 'rgba(255,255,255,0)');
+  g.addColorStop(0.50, 'rgba(255,250,236,0.9)');
+  g.addColorStop(0.64, 'rgba(255,255,255,0)');
+  g.addColorStop(1.00, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, s, s);
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  return tex;
+}
 
 function roundRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
@@ -1532,79 +1471,153 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-/** 画一张「相纸」：奶油金相框 + 圆角照片 + 底部配文 */
-function paintCard(cv, ctx, img, caption) {
+/** 手写字间距（不依赖 ctx.letterSpacing 的兼容性） */
+function drawSpaced(ctx, text, x, y, spacing) {
+  let cx = x;
+  for (const ch of text) {
+    ctx.fillText(ch, cx, y);
+    cx += ctx.measureText(ch).width + spacing;
+  }
+}
+
+/** 画一张实体拍立得相纸 */
+function paintCard(cv, ctx, img, caption, index) {
   const W = CARD_W, H = CARD_H;
   ctx.clearRect(0, 0, W, H);
 
-  // 相纸外框（暖金渐变）
-  const frame = ctx.createLinearGradient(0, 0, W, H);
-  frame.addColorStop(0, '#f7ead4');
-  frame.addColorStop(0.52, '#e2c69b');
-  frame.addColorStop(1, '#c3a071');
-  roundRect(ctx, 3, 3, W - 6, H - 6, 30);
-  ctx.fillStyle = frame;
+  /* —— 1. 象牙白相纸底 —— */
+  const paper = ctx.createLinearGradient(W * 0.10, 0, W * 0.90, H);
+  paper.addColorStop(0.00, '#fcf9f2');
+  paper.addColorStop(0.48, '#f3eadb');
+  paper.addColorStop(1.00, '#e8dcc6');
+  roundRect(ctx, 2, 2, W - 4, H - 4, 26);
+  ctx.fillStyle = paper;
   ctx.fill();
 
-  // 相纸内缘的一圈高光
-  roundRect(ctx, 3, 3, W - 6, H - 6, 30);
-  ctx.strokeStyle = 'rgba(255,255,255,0.55)';
-  ctx.lineWidth = 2;
+  /* —— 2. 纸张纤维颗粒 —— */
+  ctx.save();
+  roundRect(ctx, 2, 2, W - 4, H - 4, 26);
+  ctx.clip();
+  ctx.globalCompositeOperation = 'overlay';
+  ctx.globalAlpha = 0.40;
+  ctx.fillStyle = ctx.createPattern(paperGrain, 'repeat');
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+
+  /* —— 3. 外缘高光 + 香槟烫金内描边 —— */
+  roundRect(ctx, 3.5, 3.5, W - 7, H - 7, 25);
+  ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+  ctx.lineWidth = 3;
   ctx.stroke();
 
-  // 照片区域
-  const px = 22, py = 22, pw = W - 44, ph = H - 44 - 62;
+  roundRect(ctx, 15, 15, W - 30, H - 30, 19);
+  ctx.strokeStyle = 'rgba(190,155,95,0.50)';
+  ctx.lineWidth = 1.6;
+  ctx.stroke();
+
+  /* —— 4. 相片区 —— */
   ctx.save();
-  roundRect(ctx, px, py, pw, ph, 16);
+  roundRect(ctx, PH_X, PH_Y, PH_W, PH_H, 10);
   ctx.clip();
 
   if (img) {
     const sr = img.width / img.height;
-    const dr = pw / ph;
+    const dr = PH_W / PH_H;
     let sw, sh, sx, sy;
     if (sr > dr) { sh = img.height; sw = sh * dr; sx = (img.width - sw) / 2; sy = 0; }
     else { sw = img.width; sh = sw / dr; sx = 0; sy = (img.height - sh) / 2; }
-    ctx.drawImage(img, sx, sy, sw, sh, px, py, pw, ph);
+    ctx.drawImage(img, sx, sy, sw, sh, PH_X, PH_Y, PH_W, PH_H);
   } else {
-    const g = ctx.createRadialGradient(px + pw / 2, py + ph * 0.42, 10, px + pw / 2, py + ph * 0.42, pw * 0.72);
+    const g = ctx.createRadialGradient(
+      PH_X + PH_W / 2, PH_Y + PH_H * 0.42, 20,
+      PH_X + PH_W / 2, PH_Y + PH_H * 0.42, PH_W * 0.55);
     g.addColorStop(0, '#ffcf8a');
     g.addColorStop(0.45, '#c9782f');
     g.addColorStop(1, '#4a2a12');
     ctx.fillStyle = g;
-    ctx.fillRect(px, py, pw, ph);
+    ctx.fillRect(PH_X, PH_Y, PH_W, PH_H);
+
     ctx.fillStyle = 'rgba(255,246,226,0.92)';
-    ctx.font = '600 54px "PingFang SC","Microsoft YaHei",serif';
+    ctx.font = '600 84px "PingFang SC","Microsoft YaHei",serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('✦', px + pw / 2, py + ph * 0.4);
-    ctx.font = '500 22px "PingFang SC","Microsoft YaHei",sans-serif';
-    ctx.fillStyle = 'rgba(255,246,226,0.65)';
-    ctx.fillText('回忆加载中', px + pw / 2, py + ph * 0.66);
+    ctx.fillText('✦', PH_X + PH_W / 2, PH_Y + PH_H * 0.42);
+    ctx.font = '500 34px "PingFang SC","Microsoft YaHei",sans-serif';
+    ctx.fillStyle = 'rgba(255,246,226,0.6)';
+    ctx.fillText('回忆加载中', PH_X + PH_W / 2, PH_Y + PH_H * 0.66);
   }
 
-  // 照片下沿压暗，让相纸过渡自然
-  const shade = ctx.createLinearGradient(0, py + ph * 0.7, 0, py + ph);
-  shade.addColorStop(0, 'rgba(0,0,0,0)');
-  shade.addColorStop(1, 'rgba(0,0,0,0.28)');
-  ctx.fillStyle = shade;
-  ctx.fillRect(px, py + ph * 0.7, pw, ph * 0.3);
+  /* —— 5. 电影感调色：极淡暖金柔光 —— */
+  ctx.globalCompositeOperation = 'soft-light';
+  const warm = ctx.createLinearGradient(0, PH_Y, 0, PH_Y + PH_H);
+  warm.addColorStop(0, 'rgba(255,214,150,0.55)');
+  warm.addColorStop(1, 'rgba(255,168,88,0.35)');
+  ctx.fillStyle = warm;
+  ctx.fillRect(PH_X, PH_Y, PH_W, PH_H);
+  ctx.globalCompositeOperation = 'source-over';
+
+  /* —— 6. 四角自然暗角（椭圆，替代原来生硬的底部黑条） —— */
+  ctx.save();
+  ctx.translate(PH_X + PH_W / 2, PH_Y + PH_H / 2);
+  ctx.scale(1, PH_H / PH_W);
+  const R = PH_W * 0.62;
+  const vig = ctx.createRadialGradient(0, 0, R * 0.52, 0, 0, R);
+  vig.addColorStop(0, 'rgba(0,0,0,0)');
+  vig.addColorStop(1, 'rgba(26,14,6,0.40)');
+  ctx.fillStyle = vig;
+  ctx.fillRect(-PH_W / 2, -PH_W / 2, PH_W, PH_W);
   ctx.restore();
 
-  // 照片描边
-  roundRect(ctx, px, py, pw, ph, 16);
-  ctx.strokeStyle = 'rgba(90,62,32,0.35)';
-  ctx.lineWidth = 2;
+  /* —— 7. 内凹压痕：上/左偏深，下/右微亮 —— */
+  const DK = 30;
+  let gs;
+  gs = ctx.createLinearGradient(0, PH_Y, 0, PH_Y + DK);
+  gs.addColorStop(0, 'rgba(48,32,16,0.42)');
+  gs.addColorStop(1, 'rgba(48,32,16,0)');
+  ctx.fillStyle = gs;
+  ctx.fillRect(PH_X, PH_Y, PH_W, DK);
+
+  gs = ctx.createLinearGradient(PH_X, 0, PH_X + DK, 0);
+  gs.addColorStop(0, 'rgba(48,32,16,0.34)');
+  gs.addColorStop(1, 'rgba(48,32,16,0)');
+  ctx.fillStyle = gs;
+  ctx.fillRect(PH_X, PH_Y, DK, PH_H);
+
+  gs = ctx.createLinearGradient(0, PH_Y + PH_H, 0, PH_Y + PH_H - DK * 0.8);
+  gs.addColorStop(0, 'rgba(255,248,232,0.30)');
+  gs.addColorStop(1, 'rgba(255,248,232,0)');
+  ctx.fillStyle = gs;
+  ctx.fillRect(PH_X, PH_Y + PH_H - DK * 0.8, PH_W, DK * 0.8);
+
+  gs = ctx.createLinearGradient(PH_X + PH_W, 0, PH_X + PH_W - DK * 0.8, 0);
+  gs.addColorStop(0, 'rgba(255,248,232,0.24)');
+  gs.addColorStop(1, 'rgba(255,248,232,0)');
+  ctx.fillStyle = gs;
+  ctx.fillRect(PH_X + PH_W - DK * 0.8, PH_Y, DK * 0.8, PH_H);
+
+  ctx.restore();
+
+  /* —— 8. 相片边缘烫金细线 —— */
+  roundRect(ctx, PH_X + 0.5, PH_Y + 0.5, PH_W - 1, PH_H - 1, 10);
+  ctx.strokeStyle = 'rgba(176,140,84,0.55)';
+  ctx.lineWidth = 1.4;
   ctx.stroke();
 
-  // 底部配文（相纸上的深色字）
-  const cap = (caption || '').slice(0, 16);
+  /* —— 9. 底部留白区：衬线配文 + 香槟金编号 —— */
+  const cap = (caption || '').slice(0, 18);
   if (cap) {
-    ctx.fillStyle = 'rgba(74,52,28,0.88)';
-    ctx.font = '600 26px "PingFang SC","Microsoft YaHei",sans-serif';
-    ctx.textAlign = 'center';
+    ctx.fillStyle = '#3d2c1e';
+    ctx.font = '500 38px "STKaiti","Kaiti SC","Songti SC","Noto Serif SC",Georgia,serif';
+    ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(cap, W / 2, H - 43);
+    drawSpaced(ctx, cap, PH_X + 10, CAP_Y, 3);
   }
+
+  ctx.fillStyle = 'rgba(178,142,88,0.92)';
+  ctx.font = '500 24px "PingFang SC","Songti SC",Georgia,serif';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('✦ ' + String(((index | 0) + 1)).padStart(2, '0'), CARD_W - PH_X - 10, CAP_Y);
 }
 
 /** 悬停高亮用的描边贴图（所有卡片共用一张） */
@@ -1614,11 +1627,11 @@ function makeFrameGlowTexture() {
   cv.height = CARD_H;
   const ctx = cv.getContext('2d');
   ctx.clearRect(0, 0, CARD_W, CARD_H);
-  roundRect(ctx, 5, 5, CARD_W - 10, CARD_H - 10, 28);
+  roundRect(ctx, 6, 6, CARD_W - 12, CARD_H - 12, 24);
   ctx.strokeStyle = 'rgba(255,235,200,1)';
-  ctx.lineWidth = 7;
+  ctx.lineWidth = 12;
   ctx.shadowColor = 'rgba(255,200,120,1)';
-  ctx.shadowBlur = 22;
+  ctx.shadowBlur = 40;
   ctx.stroke();
   ctx.stroke();
   const tex = new THREE.CanvasTexture(cv);
@@ -1632,18 +1645,32 @@ function createPhotoCard(item, index) {
   cv.width = CARD_W;
   cv.height = CARD_H;
   const ctx = cv.getContext('2d');
-  paintCard(cv, ctx, null, item.caption);
+  paintCard(cv, ctx, null, item.caption, index);
 
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 4;
+  tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
 
+  // 卡片本体：圆角靠 alphaTest 裁切，接近不透明时才开深度写入
   const mat = new THREE.MeshBasicMaterial({
-    map: tex, transparent: true, depthWrite: false,
-    side: THREE.DoubleSide, toneMapped: false, opacity: 0
+    map: tex,
+    transparent: true,
+    alphaTest: 0.32,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    toneMapped: false,
+    opacity: 0
   });
   const mesh = new THREE.Mesh(CARD_GEO, mat);
   mesh.renderOrder = 3;
+
+  // 厚卡纸背板：香槟金，给卡片真实厚度并挡住背后的星空粒子
+  const board = new THREE.Mesh(
+    new THREE.BoxGeometry(CARD_SIZE_W * 0.952, CARD_SIZE_H * 0.962, 0.024),
+    new THREE.MeshBasicMaterial({ color: 0xc9a878, toneMapped: false })
+  );
+  board.position.z = -0.014;
+  mesh.add(board);
 
   // 背后柔光
   const haloMat = new THREE.MeshBasicMaterial({
@@ -1651,7 +1678,7 @@ function createPhotoCard(item, index) {
     blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0
   });
   const halo = new THREE.Mesh(new THREE.PlaneGeometry(2.7, 2.2), haloMat);
-  halo.position.z = -0.02;
+  halo.position.z = -0.055;
   mesh.add(halo);
 
   // 悬停高光边框
@@ -1663,14 +1690,29 @@ function createPhotoCard(item, index) {
   glow.position.z = 0.004;
   mesh.add(glow);
 
+  // 光面覆膜扫光：只覆盖相片区
+  const sheenTex = makeSheenTexture();
+  const sheenMat = new THREE.MeshBasicMaterial({
+    map: sheenTex, transparent: true,
+    blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0
+  });
+  const sheenW = (PH_W / CARD_W) * CARD_SIZE_W;
+  const sheenH = (PH_H / CARD_H) * CARD_SIZE_H;
+  const sheenY = (0.5 - (PH_Y + PH_H / 2) / CARD_H) * CARD_SIZE_H;
+  const sheen = new THREE.Mesh(new THREE.PlaneGeometry(sheenW, sheenH), sheenMat);
+  sheen.position.set(0, sheenY, 0.006);
+  mesh.add(sheen);
+
   const card = {
-    index, item, canvas: cv, ctx, tex, mesh, mat, haloMat, glowMat,
+    index, item, canvas: cv, ctx, tex, mesh, mat,
+    board, haloMat, glowMat, sheenMat, sheenTex,
     angle0: (index / MEMORY_PHOTOS.length) * Math.PI * 2,
-    radius: 4.05 + (index % 2) * 0.35,
-    y0: 1.15 + (index % 2 === 0 ? 0.42 : -0.30),
+    radius: 4.20 + (index % 2) * 0.30,
+    y0: 1.55 + (index % 2) * 0.50,        // 1.55 / 2.05，抬高避免被底部栏遮挡
     speed: 0.30,
     appear: 0,
     hover: 0,
+    focus: 0,
     appearAt: 0,
     imageOk: false
   };
@@ -1691,7 +1733,7 @@ function loadPhotoImage(card) {
     done = true;
     card.imageOk = !!(ok && img.naturalWidth);
     if (card.imageOk) {
-      paintCard(card.canvas, card.ctx, img, card.item.caption);
+      paintCard(card.canvas, card.ctx, img, card.item.caption, card.index);
       card.tex.needsUpdate = true;
     }
   };
@@ -1728,12 +1770,6 @@ const ritualEl = $('ritual');
 const giftCardEl = $('gift-card');
 const giftMaskEl = $('gift-mask');
 const giftBarEl = $('gift-bar');
-const viewerEl = $('viewer');
-const viewerImg = $('viewer-img');
-const viewerSkel = $('viewer-skel');
-const viewerFallback = $('viewer-fallback');
-const viewerCapText = $('viewer-cap-text');
-const viewerCapIdx = $('viewer-cap-idx');
 const photoTipEl = $('photo-tip');
 const wishScreenEl = $('wish-screen');
 const wishTextEl = $('wish-text');
@@ -1757,6 +1793,11 @@ let pointerX = 0, pointerY = 0;
 const raycaster = new THREE.Raycaster();
 const pointerNDC = new THREE.Vector2(-10, -10);
 let hoveredCard = null;
+
+/* 照片轨道 / 特写用的临时向量（避免每帧分配） */
+const _camFwd = new THREE.Vector3();
+const _focusPos = new THREE.Vector3();
+const _orbitPos = new THREE.Vector3();
 
 function setNDC(clientX, clientY) {
   pointerNDC.x = (clientX / window.innerWidth) * 2 - 1;
@@ -1814,7 +1855,16 @@ function endDrag(e) {
 
   if (dragDist < 8 && performance.now() - downTime < 450) {
     const card = e ? pickPhoto(e.clientX, e.clientY) : null;
-    if (card) { openViewer(card.index); return; }
+
+    // 点照片 → 特写 / 再点同一张或点空白 → 归位
+    if (card) {
+      focusedCard = (focusedCard === card) ? null : card;
+      return;
+    }
+    if (focusedCard) {
+      focusedCard = null;
+      return;
+    }
 
     if (ritual.stage === 'unlit' && e && nearCandle(e)) { igniteCandle('点击蜡烛'); return; }
     if (ritual.stage === 'ready' && e && nearCandle(e)) { blowOut('点击蜡烛'); return; }
@@ -1829,6 +1879,11 @@ canvas.addEventListener('wheel', e => {
   e.preventDefault();
   state.distTarget = clamp(state.distTarget * (1 + Math.sign(e.deltaY) * 0.085), 3.4, 9.6);
 }, { passive: false });
+
+// Esc 退出照片特写
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && focusedCard) focusedCard = null;
+});
 
 $('btn-scatter').addEventListener('click', () => { state.spreadTarget = 1; });
 $('btn-gather').addEventListener('click', () => {
@@ -2350,79 +2405,6 @@ function detectBlow() {
 }
 
 /* ============================================================================
-   12. 照片灯箱
-   ========================================================================== */
-let viewerIndex = -1;
-
-function openViewer(index) {
-  viewerIndex = (index + MEMORY_PHOTOS.length) % MEMORY_PHOTOS.length;
-  const item = MEMORY_PHOTOS[viewerIndex];
-  viewerCapText.textContent = item.caption || '';
-  viewerCapIdx.textContent = `${viewerIndex + 1} / ${MEMORY_PHOTOS.length}`;
-
-  const url = (item.url || '').trim();
-  viewerImg.classList.remove('loaded');
-  viewerSkel.classList.remove('hide');
-  viewerFallback.style.display = 'none';
-
-  if (url) {
-    viewerImg.style.display = 'block';
-    // 重新触发加载动画
-    viewerImg.src = url;
-    if (viewerImg.complete && viewerImg.naturalWidth) {
-      viewerImg.classList.add('loaded');
-      viewerSkel.classList.add('hide');
-    }
-  } else {
-    viewerImg.style.display = 'none';
-    viewerSkel.classList.add('hide');
-    viewerFallback.style.display = 'grid';
-  }
-  viewerEl.classList.add('show');
-}
-
-viewerImg.addEventListener('load', () => {
-  viewerImg.classList.add('loaded');
-  viewerSkel.classList.add('hide');
-});
-viewerImg.addEventListener('error', () => {
-  viewerImg.style.display = 'none';
-  viewerSkel.classList.add('hide');
-  viewerFallback.style.display = 'grid';
-});
-
-function closeViewer() {
-  viewerEl.classList.remove('show');
-  viewerIndex = -1;
-}
-
-function stepViewer(delta) {
-  if (viewerIndex < 0) return;
-  openViewer(viewerIndex + delta);
-}
-
-viewerEl.addEventListener('click', e => {
-  const btn = e.target.closest('[data-v]');
-  if (!btn) return;
-  switch (btn.dataset.v) {
-    case 'close': closeViewer(); break;
-    case 'prev': stepViewer(-1); break;
-    case 'next': stepViewer(1); break;
-    case 'gather': closeViewer(); gatherBack('灯箱按钮'); break;
-  }
-});
-viewerEl.addEventListener('click', e => {
-  if (e.target === viewerEl) closeViewer();
-});
-
-document.addEventListener('keydown', e => {
-  if (viewerIndex < 0) return;
-  if (e.key === 'Escape') closeViewer();
-  else if (e.key === 'ArrowLeft') stepViewer(-1);
-  else if (e.key === 'ArrowRight') stepViewer(1);
-});
-
-/* ============================================================================
    13. 仪式状态机（点燃 → 比耶 → 点赞 → 吹灭）
    ========================================================================== */
 const STEPS = ['点燃', '花束', '比耶', '点赞', '许愿', '吹灭'];
@@ -2514,9 +2496,9 @@ function gatherBack(source) {
   state.autoSpeed = 1;
 
   hoveredCard = null;
+  focusedCard = null;
   photoTipEl.classList.remove('show');
   canvas.style.cursor = 'grab';
-  closeViewer();
 
   setStatus(`点赞成功 👍🏻 蛋糕回来了（${source}）· 闭上眼睛，许个愿吧`, true);
   syncRitualUI();
@@ -2852,35 +2834,65 @@ function animate() {
     if (fade <= 0.01) {
       photosActive = false;
       photoGroup.visible = false;
+      focusedCard = null;
     }
 
-    const slow = hoveredCard ? 0.32 : 1;
+    // 有特写时几乎停转，悬停时减速
+    const slow = focusedCard ? 0.12 : (hoveredCard ? 0.32 : 1);
     orbitTime += dt * slow;
+
+    // 特写目标点：相机正前方
+    camera.getWorldDirection(_camFwd);
+    _focusPos.copy(camera.position).addScaledVector(_camFwd, FOCUS_DIST);
 
     for (const c of photos) {
       const localT = clamp01((ritual.t - (c.appearAt || 0)) / 0.9);
       c.appear = damp(c.appear, localT, 6, dt);
 
+      const isFocus = c === focusedCard;
+      const anyFocus = !!focusedCard;
+      c.focus = damp(c.focus, isFocus ? 1 : 0, 6, dt);
+
+      // 轨道目标
       const a = c.angle0 + orbitTime * c.speed;
-      const r = c.radius + ritual.photoOut * 2.4;      // 收起时向外飘散
-      c.mesh.position.set(
+      const r = c.radius + (anyFocus && !isFocus ? 2.2 : 0) + ritual.photoOut * 2.4;
+      _orbitPos.set(
         Math.cos(a) * r,
-        c.y0 + Math.sin(t * 0.9 + c.index * 1.7) * 0.22 + ritual.photoOut * 0.8,
+        c.y0 + Math.sin(t * 0.9 + c.index * 1.7) * 0.14 + ritual.photoOut * 0.8,
         Math.sin(a) * r
       );
-      // 朝向相机（Billboard），再叠一点点"呼吸"微倾，避免死板
+      if (isFocus) _orbitPos.copy(_focusPos);
+
+      // 位置平滑（特写飞行 / 归位都靠它）
+      c.mesh.position.lerp(_orbitPos, 1 - Math.exp(-6 * dt));
+
+      // 朝向相机（Billboard），特写时取消微倾，正对观赏
       c.mesh.lookAt(camera.position);
-      c.mesh.rotateZ(Math.sin(t * 0.6 + c.index * 1.3) * 0.035);
+      c.mesh.rotateZ(Math.sin(t * 0.6 + c.index * 1.3) * 0.035 * (1 - c.focus));
 
       const hoverT = c === hoveredCard ? 1 : 0;
       c.hover = damp(c.hover, hoverT, 8, dt);
 
-      const pop = c.appear * (1 + c.hover * 0.14) * (1 - ritual.photoOut * 0.35);
+      // 缩放：特写放大，其余后退缩小
+      const base = c.appear * (1 + c.hover * 0.14) * (1 - ritual.photoOut * 0.35);
+      const shrink = anyFocus && !isFocus ? 0.78 : 1;
+      const pop = base * shrink * (1 + c.focus * (FOCUS_SCALE - 1));
       c.mesh.scale.setScalar(Math.max(0.001, pop));
 
-      c.mat.opacity = clamp01(c.appear) * (0.9 + c.hover * 0.1) * fade;
-      c.haloMat.opacity = clamp01(c.appear) * (0.20 + c.hover * 0.30) * fade;
-      c.glowMat.opacity = clamp01(c.appear) * (0.10 + c.hover * 0.80) * fade;
+      // 不透明度：完全展开后达到 1.0（实体相纸），其余照片淡化后退
+      const dim = anyFocus && !isFocus ? 0.22 : 1;
+      const op = clamp01(c.appear) * fade * dim;
+      c.mat.opacity = Math.min(1, op);
+      // 接近完全不透明时开启深度写入，避免星空粒子从照片背后透出来
+      c.mat.depthWrite = c.mat.opacity > 0.9;
+
+      c.haloMat.opacity = clamp01(c.appear) * (0.20 + c.hover * 0.32 + c.focus * 0.35) * fade * dim;
+      c.glowMat.opacity = clamp01(c.appear) * (0.10 + c.hover * 0.70 + c.focus * 0.25) * fade * dim;
+
+      // 光面覆膜扫光：缓慢斜向划过照片表面
+      c.sheenTex.offset.x = ((t * 0.16 + c.index * 0.37) % 1.6) - 0.3;
+      c.sheenMat.opacity = clamp01(c.appear) * fade *
+        (0.09 + 0.05 * Math.sin(t * 1.3 + c.index * 2.1) + c.focus * 0.05);
     }
 
     if (!ritual.leaving && fade > 0.5) {
@@ -2994,9 +3006,11 @@ window.addEventListener('pointerdown', () => {
 window.__cakeDebug = {
   ritual, state, gesture, renderer, camera, analyzeHand, onHandResults,
   CARD_URL, MEMORY_PHOTOS, photoGroup, photos,
-  igniteCandle, bouquetMorph, posePhotos, gatherBack, startWish, finishWish, blowOut, openViewer,
+  igniteCandle, bouquetMorph, posePhotos, gatherBack, startWish, finishWish, blowOut,
   enableMic, detectBlow, classifyBlow, MIC,
   bouquetTargets, wishRings,
+  focusCard: i => { focusedCard = (i === null || i === undefined) ? null : photos[i]; return focusedCard ? focusedCard.index : null; },
+  focused: () => focusedCard ? focusedCard.index : null,
   micOn: () => micOn,
   micState: () => micOn ? { state: audioCtx?.state, rms: +MIC.rms.toFixed(4), flat: +MIC.flatness.toFixed(3), low: +MIC.lowRatio.toFixed(3), level: +MIC.level.toFixed(3) } : null
 };
