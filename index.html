@@ -1,0 +1,2439 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>手势控制 · 3D 发光粒子生日蛋糕 · 比耶星环</title>
+<style>
+  :root{
+    --gold:#ffcf8a;
+    --gold-soft:#ffb45a;
+    --cream:#f7e8d4;
+    --line:rgba(255,207,138,.18);
+    --line-strong:rgba(255,207,138,.34);
+    --panel:rgba(13,15,22,.66);
+  }
+  *{box-sizing:border-box}
+  html,body{
+    margin:0;height:100%;overflow:hidden;background:#06070c;color:var(--cream);
+    font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,-apple-system,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  #scene{
+    position:fixed;inset:0;display:block;width:100%;height:100%;
+    touch-action:none;cursor:grab;
+  }
+  #scene.dragging{cursor:grabbing}
+
+  .vignette{
+    position:fixed;inset:0;pointer-events:none;z-index:2;
+    background:
+      radial-gradient(ellipse 62% 58% at 50% 46%,rgba(0,0,0,0) 40%,rgba(0,0,0,.48) 100%),
+      linear-gradient(180deg,rgba(6,7,12,.72),rgba(6,7,12,0) 26%,rgba(6,7,12,0) 72%,rgba(6,7,12,.78));
+  }
+
+  .ui{position:fixed;inset:0;z-index:3;pointer-events:none}
+  .ui > *{pointer-events:auto}
+
+  /* ---------- 品牌 ---------- */
+  .brand{
+    position:absolute;top:22px;left:26px;pointer-events:none;
+    text-shadow:0 2px 18px rgba(0,0,0,.6);
+  }
+  .brand h1{
+    margin:0;font-size:19px;font-weight:600;letter-spacing:.06em;
+    background:linear-gradient(100deg,#ffe9c9,#ffc078 62%,#ff9f7a);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  }
+  .brand p{
+    margin:6px 0 0;font-size:11.5px;letter-spacing:.22em;text-transform:uppercase;
+    color:rgba(255,226,190,.5);
+  }
+
+  /* ---------- 步骤条 ---------- */
+  .stepper{
+    position:absolute;top:22px;left:50%;transform:translateX(-50%);
+    display:flex;gap:7px;align-items:center;
+    padding:7px 15px;border-radius:999px;
+    background:var(--panel);border:1px solid var(--line);
+    backdrop-filter:blur(16px) saturate(150%);
+    -webkit-backdrop-filter:blur(16px) saturate(150%);
+    box-shadow:0 12px 32px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.05);
+    font-size:11.5px;letter-spacing:.05em;pointer-events:none;white-space:nowrap;
+    transition:opacity .9s ease;
+  }
+  .step{display:flex;align-items:center;gap:6px;color:rgba(255,226,190,.32);transition:color .55s ease}
+  .step i{
+    width:18px;height:18px;border-radius:50%;display:grid;place-items:center;
+    border:1px solid rgba(255,207,138,.22);font-style:normal;font-size:10px;line-height:1;
+    transition:all .55s ease;
+  }
+  .step.active{color:#ffe4bd}
+  .step.active i{
+    background:linear-gradient(135deg,#ffd79a,#ffab5e);color:#2a1708;
+    border-color:transparent;box-shadow:0 0 16px rgba(255,170,90,.65);
+  }
+  .step.done{color:rgba(255,226,190,.62)}
+  .step.done i{background:rgba(255,207,138,.16);border-color:rgba(255,207,138,.42);color:#ffd79a}
+  .step-div{width:13px;height:1px;background:rgba(255,207,138,.18)}
+
+  /* ---------- 摄像头卡片 ---------- */
+  .cam-card{
+    position:absolute;top:22px;right:26px;width:268px;
+    background:var(--panel);border:1px solid var(--line);border-radius:18px;
+    padding:12px;backdrop-filter:blur(16px) saturate(150%);
+    -webkit-backdrop-filter:blur(16px) saturate(150%);
+    box-shadow:0 18px 48px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.05);
+    transition:opacity .9s ease;
+  }
+  .cam-head{
+    display:flex;align-items:center;justify-content:space-between;
+    font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+    color:rgba(255,226,190,.55);margin:2px 2px 10px;
+  }
+  .dot{
+    width:7px;height:7px;border-radius:50%;background:#5a5f6e;
+    box-shadow:0 0 0 0 rgba(255,160,90,.5);transition:background .3s;
+  }
+  .dot.live{background:#7dffb0;box-shadow:0 0 10px rgba(125,255,176,.85);animation:pulse 1.6s infinite}
+  .dot.wait{background:#ffc35a;box-shadow:0 0 10px rgba(255,195,90,.7)}
+  @keyframes pulse{
+    0%,100%{box-shadow:0 0 0 0 rgba(125,255,176,.55)}
+    50%{box-shadow:0 0 0 6px rgba(125,255,176,0)}
+  }
+
+  .cam-stage{
+    position:relative;width:100%;aspect-ratio:4/3;border-radius:12px;overflow:hidden;
+    background:radial-gradient(circle at 50% 40%,#12141c,#080910 70%);
+    border:1px solid rgba(255,255,255,.06);
+  }
+  .cam-stage video,.cam-stage canvas{
+    position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+    transform:scaleX(-1);
+  }
+  .cam-placeholder{
+    position:absolute;inset:0;display:flex;flex-direction:column;gap:6px;
+    align-items:center;justify-content:center;text-align:center;
+    font-size:12.5px;color:rgba(255,226,190,.6);line-height:1.6;
+  }
+  .cam-placeholder span{font-size:11px;color:rgba(255,226,190,.34)}
+
+  .status{
+    margin-top:10px;padding:9px 11px;border-radius:11px;
+    background:rgba(255,207,138,.07);border:1px solid rgba(255,207,138,.12);
+    font-size:12.5px;line-height:1.45;color:#ffe4bd;min-height:38px;
+    display:flex;align-items:center;
+  }
+  .status.active{background:rgba(126,255,178,.09);border-color:rgba(126,255,178,.28);color:#c9ffdf}
+
+  .meters{margin-top:9px;display:flex;flex-direction:column;gap:7px}
+  .meter{display:flex;align-items:center;gap:9px;font-size:10.5px;color:rgba(255,226,190,.5)}
+  .meter > span{width:36px;flex:none;letter-spacing:.08em}
+  .bar{flex:1;height:4px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden}
+  .bar i{
+    display:block;height:100%;width:0%;border-radius:99px;
+    background:linear-gradient(90deg,#ffb45a,#ffe3b0);
+    box-shadow:0 0 10px rgba(255,180,90,.65);
+  }
+
+  /* ---------- 仪式动作面板 ---------- */
+  .ritual{
+    position:absolute;left:50%;bottom:112px;transform:translateX(-50%);
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;
+    padding:10px 16px;border-radius:20px;
+    max-width:min(780px,calc(100vw - 32px));min-height:56px;
+    background:var(--panel);border:1px solid var(--line);
+    backdrop-filter:blur(16px) saturate(150%);
+    -webkit-backdrop-filter:blur(16px) saturate(150%);
+    box-shadow:0 16px 44px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.05);
+    transition:opacity .45s ease,transform .45s ease;
+    font-size:13px;
+  }
+  .ritual-label{font-size:12.5px;letter-spacing:.06em;color:#ffe4bd;white-space:nowrap}
+  .ritual-tip{font-size:11px;color:rgba(255,226,190,.4);white-space:nowrap}
+  .mic-meter{
+    width:74px;height:4px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;
+  }
+  .mic-meter i{
+    display:block;height:100%;width:0%;border-radius:99px;
+    background:linear-gradient(90deg,#7dd3fc,#a7f3d0);transition:width .06s linear;
+  }
+  .mic-meter i.hot{background:linear-gradient(90deg,#a7f3d0,#fde68a)}
+
+  .mic-sens-wrap{
+    display:flex;align-items:center;gap:6px;white-space:nowrap;
+    font-size:10.5px;letter-spacing:.06em;color:rgba(255,226,190,.5);
+  }
+  .mic-sens-wrap input[type="range"]{
+    -webkit-appearance:none;appearance:none;
+    width:76px;height:4px;border-radius:99px;outline:none;cursor:pointer;
+    background:rgba(255,255,255,.12);
+  }
+  .mic-sens-wrap input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;
+    width:12px;height:12px;border-radius:50%;
+    background:linear-gradient(135deg,#ffd79a,#ffab5e);
+    box-shadow:0 0 8px rgba(255,180,90,.65);
+  }
+  .mic-sens-wrap input[type="range"]::-moz-range-thumb{
+    width:12px;height:12px;border:none;border-radius:50%;
+    background:#ffcf8a;box-shadow:0 0 8px rgba(255,180,90,.65);
+  }
+
+  /* ---------- 底部控制条 ---------- */
+  .controls{
+    position:absolute;left:50%;bottom:30px;transform:translateX(-50%);
+    display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;
+    padding:9px;border-radius:999px;
+    background:var(--panel);border:1px solid var(--line);
+    backdrop-filter:blur(16px) saturate(150%);
+    -webkit-backdrop-filter:blur(16px) saturate(150%);
+    box-shadow:0 16px 40px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.05);
+    max-width:calc(100vw - 32px);
+    transition:opacity .9s ease;
+  }
+  .btn{
+    appearance:none;border:1px solid rgba(255,207,138,.22);
+    background:rgba(255,214,160,.06);color:#ffeacb;
+    font:inherit;font-size:13px;letter-spacing:.05em;
+    padding:9px 17px;border-radius:999px;cursor:pointer;
+    transition:background .2s,border-color .2s,transform .12s,box-shadow .2s;
+    white-space:nowrap;
+  }
+  .btn:hover{background:rgba(255,214,160,.16);border-color:rgba(255,207,138,.42)}
+  .btn:active{transform:scale(.96)}
+  .btn.primary{
+    background:linear-gradient(135deg,#ffd79a,#ffab5e);
+    color:#2a1708;border-color:transparent;font-weight:600;
+    box-shadow:0 6px 20px rgba(255,160,80,.28);
+  }
+  .btn.primary:hover{background:linear-gradient(135deg,#ffe2b0,#ffb974)}
+  .btn.primary.on{background:linear-gradient(135deg,#9dffc6,#57d99a);color:#06281a}
+  .btn.ghost{background:transparent}
+  .btn:disabled{opacity:.5;cursor:default}
+
+  .hint{
+    position:absolute;left:50%;bottom:84px;transform:translateX(-50%);
+    font-size:11.5px;letter-spacing:.1em;color:rgba(255,226,190,.36);
+    pointer-events:none;text-align:center;white-space:nowrap;
+    transition:opacity .9s ease;
+  }
+  .fps{
+    position:absolute;left:26px;bottom:26px;font-size:11px;letter-spacing:.14em;
+    color:rgba(255,226,190,.34);font-variant-numeric:tabular-nums;pointer-events:none;
+  }
+
+  /* ---------- 悬停照片时的 caption 胶囊 ---------- */
+  .photo-tip{
+    position:fixed;z-index:5;pointer-events:none;
+    transform:translate(-50%,-140%) scale(.94);
+    padding:7px 15px;border-radius:999px;white-space:nowrap;
+    background:rgba(20,16,12,.78);border:1px solid rgba(255,214,160,.35);
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    font-size:12px;letter-spacing:.04em;color:#ffe9c9;
+    box-shadow:0 10px 28px rgba(0,0,0,.5),0 0 20px rgba(255,180,90,.16);
+    opacity:0;transition:opacity .25s ease,transform .25s ease;
+  }
+  .photo-tip.show{opacity:1;transform:translate(-50%,-160%) scale(1)}
+
+  /* ============================================================
+     照片灯箱
+     ============================================================ */
+  .viewer{
+    position:fixed;inset:0;z-index:6;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(ellipse 70% 60% at 50% 45%,rgba(10,8,6,.62),rgba(3,3,6,.9));
+    backdrop-filter:blur(14px) saturate(130%);
+    -webkit-backdrop-filter:blur(14px) saturate(130%);
+    opacity:0;pointer-events:none;transition:opacity .45s ease;
+  }
+  .viewer.show{opacity:1;pointer-events:auto}
+
+  .viewer-inner{
+    display:flex;flex-direction:column;align-items:center;gap:16px;
+    transform:translateY(10px) scale(.98);
+    transition:transform .5s cubic-bezier(.2,.85,.25,1);
+  }
+  .viewer.show .viewer-inner{transform:translateY(0) scale(1)}
+
+  .viewer-frame{position:relative;display:flex;align-items:center;justify-content:center}
+
+  .viewer-stage{
+    position:relative;width:min(720px,78vw);aspect-ratio:3/2;
+    border-radius:24px;padding:10px;
+    background:linear-gradient(150deg,#f6e8d2,#cfae7e 55%,#a8825a);
+    box-shadow:
+      0 40px 100px rgba(0,0,0,.75),
+      0 0 0 1px rgba(255,226,182,.35),
+      inset 0 1px 0 rgba(255,255,255,.55);
+  }
+  .viewer-stage .viewer-photo{
+    position:relative;width:100%;height:100%;border-radius:16px;overflow:hidden;
+    background:#120e0a;box-shadow:inset 0 0 40px rgba(0,0,0,.55);
+  }
+  .viewer-stage img{
+    width:100%;height:100%;object-fit:cover;display:block;
+    opacity:0;transform:scale(1.02);
+    transition:opacity .55s ease,transform .9s cubic-bezier(.2,.8,.2,1);
+  }
+  .viewer-stage img.loaded{opacity:1;transform:scale(1)}
+  .viewer-skel{
+    position:absolute;inset:0;
+    background:linear-gradient(100deg,#1a140e 20%,#2b2116 40%,#1a140e 60%);
+    background-size:220% 100%;
+    animation:shimmer 1.4s linear infinite;
+    transition:opacity .4s ease;
+  }
+  .viewer-skel.hide{opacity:0}
+  @keyframes shimmer{0%{background-position:120% 0}100%{background-position:-120% 0}}
+  .viewer-fallback{
+    position:absolute;inset:0;display:none;place-items:center;font-size:54px;
+    color:rgba(255,226,190,.8);
+    background:radial-gradient(circle at 50% 45%,#4a2c14,#1a120c 78%);
+  }
+
+  .viewer-nav{
+    position:absolute;top:50%;margin-top:-23px;z-index:2;
+    width:46px;height:46px;border-radius:50%;flex:none;
+    border:1px solid rgba(255,207,138,.30);background:rgba(16,12,9,.55);
+    color:#ffeacb;font-size:22px;line-height:1;cursor:pointer;
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    box-shadow:0 8px 24px rgba(0,0,0,.45);
+    transition:background .2s,transform .15s,border-color .2s;
+  }
+  .viewer-nav[data-v="prev"]{left:14px}
+  .viewer-nav[data-v="next"]{right:14px}
+  .viewer-nav:hover{background:rgba(255,214,160,.2);border-color:rgba(255,207,138,.5)}
+  .viewer-nav:active{transform:scale(.93)}
+
+  .viewer-close{
+    position:absolute;top:22px;right:26px;width:42px;height:42px;border-radius:50%;
+    border:1px solid rgba(255,207,138,.28);background:rgba(20,16,12,.6);
+    color:#ffeacb;font-size:16px;cursor:pointer;line-height:1;
+    transition:background .2s,transform .15s;
+  }
+  .viewer-close:hover{background:rgba(255,214,160,.18)}
+  .viewer-close:active{transform:scale(.94)}
+
+  .viewer-cap{
+    display:flex;align-items:center;gap:12px;
+    max-width:min(720px,78vw);
+    font-size:14px;letter-spacing:.05em;color:rgba(255,238,216,.9);
+    text-align:center;
+  }
+  .viewer-idx{
+    flex:none;font-size:11px;letter-spacing:.14em;color:rgba(255,226,190,.42);
+    font-variant-numeric:tabular-nums;
+  }
+  .viewer-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center}
+
+  /* ============================================================
+     庆祝转场
+     ============================================================ */
+  .gift-card{
+    position:fixed;left:50%;top:50%;z-index:7;
+    transform:translate(-50%,-46%) scale(.96);
+    width:min(440px,calc(100vw - 40px));
+    padding:34px 30px 26px;border-radius:26px;text-align:center;
+    background:linear-gradient(160deg,rgba(28,22,16,.82),rgba(12,11,16,.9));
+    border:1px solid rgba(255,207,138,.24);
+    backdrop-filter:blur(20px) saturate(160%);
+    -webkit-backdrop-filter:blur(20px) saturate(160%);
+    box-shadow:0 40px 100px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.08);
+    opacity:0;pointer-events:none;
+    transition:opacity .9s ease, transform 1s cubic-bezier(.2,.85,.25,1);
+  }
+  .gift-card.show{opacity:1;transform:translate(-50%,-50%) scale(1);pointer-events:auto}
+
+  .gift-kicker{
+    font-size:11.5px;letter-spacing:.42em;text-transform:uppercase;
+    color:rgba(255,214,160,.62);margin-bottom:14px;
+  }
+  .gift-note{margin:0;font-size:14px;line-height:1.8;color:rgba(255,236,214,.82);letter-spacing:.03em}
+  .gift-track{
+    height:3px;border-radius:99px;margin:22px auto 20px;width:78%;
+    background:rgba(255,255,255,.08);overflow:hidden;
+  }
+  .gift-track i{
+    display:block;height:100%;width:0%;border-radius:99px;
+    background:linear-gradient(90deg,#ffb45a,#ffe7bd);
+    box-shadow:0 0 12px rgba(255,190,110,.85);
+  }
+  .gift-btn{
+    appearance:none;border:none;cursor:pointer;font:inherit;font-size:14.5px;font-weight:600;
+    letter-spacing:.06em;padding:14px 34px;border-radius:999px;color:#2a1708;
+    background:linear-gradient(135deg,#ffe0ae,#ffab5e);
+    box-shadow:0 12px 34px rgba(255,160,80,.42);
+    animation:btnGlow 2.2s ease-in-out infinite;
+    transition:transform .15s ease;
+  }
+  .gift-btn:hover{transform:translateY(-1px) scale(1.02)}
+  .gift-btn:active{transform:scale(.97)}
+  @keyframes btnGlow{
+    0%,100%{box-shadow:0 12px 34px rgba(255,160,80,.42),0 0 0 0 rgba(255,190,110,.5)}
+    50%{box-shadow:0 14px 40px rgba(255,160,80,.58),0 0 0 12px rgba(255,190,110,0)}
+  }
+  .gift-sub{margin-top:16px;font-size:11px;letter-spacing:.12em;color:rgba(255,226,190,.34)}
+
+  .gift-mask{
+    position:fixed;inset:0;z-index:8;pointer-events:none;opacity:0;
+    background:
+      radial-gradient(ellipse 70% 60% at 50% 45%,rgba(46,30,12,.82),rgba(4,3,6,.99) 76%),
+      linear-gradient(180deg,#0a0703,#030304);
+    transition:opacity .8s ease;
+  }
+  .gift-mask.show{opacity:1}
+
+  body.celebrating .controls,
+  body.celebrating .hint,
+  body.celebrating .ritual,
+  body.celebrating .cam-card{opacity:.12;pointer-events:none}
+  body.celebrating .stepper{opacity:.4}
+
+  /* ---------- 启动遮罩 ---------- */
+  .boot{
+    position:fixed;inset:0;z-index:9;display:flex;flex-direction:column;gap:14px;
+    align-items:center;justify-content:center;text-align:center;
+    background:#06070c;color:#ffe4bd;font-size:14px;letter-spacing:.08em;
+    transition:opacity .7s ease;
+  }
+  .boot span{font-size:11.5px;color:rgba(255,226,190,.4);letter-spacing:.16em}
+  .boot.hide{opacity:0;pointer-events:none}
+  .boot .ring{
+    width:34px;height:34px;border-radius:50%;
+    border:2px solid rgba(255,207,138,.18);border-top-color:#ffcf8a;
+    animation:spin 1s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ---------- 响应式 ---------- */
+  @media (max-width:820px){
+    .brand{top:14px;left:14px}
+    .brand h1{font-size:14px}
+    .brand p{display:none}
+    .stepper{
+      top:40px;font-size:10px;padding:6px 10px;gap:4px;max-width:calc(100vw - 24px);
+    }
+    .step i{width:15px;height:15px;font-size:9px}
+    .step-div{width:8px}
+    .cam-card{top:150px;right:12px;width:160px;padding:8px;border-radius:15px}
+    .cam-head{font-size:9.5px;margin-bottom:7px}
+    .status{font-size:10.5px;padding:7px 9px;min-height:30px}
+    .meters{display:none}
+    .ritual{bottom:104px;padding:9px 12px;gap:8px;min-height:50px;font-size:12px}
+    .ritual-tip{display:none}
+    .controls{bottom:18px;gap:7px;padding:7px}
+    .btn{font-size:12px;padding:8px 13px}
+    .hint{display:none}
+    .fps{left:14px;bottom:10px;font-size:10px}
+    .gift-card{padding:26px 20px 20px;border-radius:22px}
+    .gift-note{font-size:12.5px}
+    .gift-btn{padding:13px 26px;font-size:13.5px}
+    .viewer-stage{width:88vw;padding:7px;border-radius:20px}
+    .viewer-nav{width:36px;height:36px;font-size:18px;margin-top:-18px}
+    .viewer-nav[data-v="prev"]{left:10px}
+    .viewer-nav[data-v="next"]{right:10px}
+    .viewer-close{top:14px;right:14px;width:38px;height:38px}
+    .viewer-cap{font-size:12px;max-width:88vw}
+  }
+  @media (max-height:640px){
+    .cam-card{width:150px}
+    .cam-stage{aspect-ratio:16/10}
+    .status{display:none}
+    .ritual{bottom:96px}
+    .gift-card{padding:24px 22px 18px}
+    .viewer-stage{width:62vw}
+  }
+</style>
+</head>
+<body>
+
+<canvas id="scene"></canvas>
+<div class="vignette"></div>
+
+<div class="ui">
+  <header class="brand">
+    <h1>手势控制 · 粒子生日蛋糕</h1>
+    <p>Three.js × MediaPipe Hands</p>
+  </header>
+
+  <!-- 步骤条：点燃 → 比耶 → 点赞 → 吹灭 -->
+  <div class="stepper" id="stepper"></div>
+
+  <aside class="cam-card">
+    <div class="cam-head">
+      <span>手势识别</span>
+      <span id="cam-dot" class="dot"></span>
+    </div>
+    <div class="cam-stage">
+      <video id="input-video" playsinline muted autoplay></video>
+      <canvas id="overlay-canvas" width="320" height="240"></canvas>
+      <div id="cam-placeholder" class="cam-placeholder">
+        摄像头未开启
+        <span>鼠标模式可用</span>
+      </div>
+    </div>
+    <div id="gesture-status" class="status">未开启摄像头 · 可用鼠标拖拽</div>
+    <div class="meters">
+      <div class="meter"><span>张开度</span><div class="bar"><i id="bar-open"></i></div></div>
+      <div class="meter"><span>捏合</span><div class="bar"><i id="bar-pinch"></i></div></div>
+    </div>
+  </aside>
+
+  <div class="ritual" id="ritual"></div>
+
+  <div class="controls">
+    <button id="btn-cam" class="btn primary" aria-label="开启或关闭摄像头">开启摄像头</button>
+    <button id="btn-scatter" class="btn" aria-label="让粒子扩散">扩散</button>
+    <button id="btn-gather" class="btn" aria-label="让粒子聚拢成蛋糕">聚拢</button>
+    <button id="btn-reset" class="btn ghost" aria-label="重置视角">重置视角</button>
+  </div>
+
+  <div id="hint" class="hint">拖拽旋转 · 滚轮缩放 · 点击画面切换扩散 / 聚拢</div>
+  <div id="fps" class="fps">-- FPS</div>
+</div>
+
+<!-- 悬停照片时的 caption 胶囊 -->
+<div class="photo-tip" id="photo-tip"></div>
+
+<!-- 照片灯箱 -->
+<div class="viewer" id="viewer">
+  <button class="viewer-close" data-v="close" aria-label="关闭">✕</button>
+  <div class="viewer-inner">
+    <div class="viewer-frame">
+      <button class="viewer-nav" data-v="prev" aria-label="上一张">‹</button>
+      <div class="viewer-stage">
+        <div class="viewer-photo">
+          <div class="viewer-skel" id="viewer-skel"></div>
+          <img id="viewer-img" alt="" />
+          <div class="viewer-fallback" id="viewer-fallback">✦</div>
+        </div>
+      </div>
+      <button class="viewer-nav" data-v="next" aria-label="下一张">›</button>
+    </div>
+    <div class="viewer-cap">
+      <span id="viewer-cap-text"></span>
+      <span class="viewer-idx" id="viewer-cap-idx"></span>
+    </div>
+    <div class="viewer-bar">
+      <button class="btn" data-v="gather">👍🏻 回到蛋糕</button>
+      <button class="btn ghost" data-v="close">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 吹灭蜡烛后：祝福卡片 -->
+<div class="gift-card" id="gift-card">
+  <div class="gift-kicker">✦ Wish Received ✦</div>
+  <p class="gift-note">愿望已收到 ✨ 正在为你开启专属信件…</p>
+  <div class="gift-track"><i id="gift-bar"></i></div>
+  <button class="gift-btn" id="gift-open">立即打开贺卡 ✉️</button>
+  <div class="gift-sub" id="gift-sub">若未自动跳转，请点击上方按钮</div>
+</div>
+
+<div class="gift-mask" id="gift-mask"></div>
+
+<div id="boot" class="boot">
+  <div class="ring"></div>
+  正在点亮蜡烛…
+  <span>LOADING THREE.JS</span>
+</div>
+
+<script defer src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.js" crossorigin="anonymous"></script>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+  }
+}
+</script>
+
+<script>
+  window.addEventListener('load', function () {
+    setTimeout(function () {
+      var boot = document.getElementById('boot');
+      if (boot && !window.__cakeReady && !boot.classList.contains('hide')) {
+        boot.innerHTML = '<div style="font-size:15px">资源加载失败</div>' +
+          '<span style="max-width:320px;line-height:1.8">无法从 CDN 获取 Three.js。<br>请检查网络 / 代理后刷新页面。</span>';
+      }
+    }, 9000);
+  });
+</script>
+
+<script type="module">
+/* ============================================================================
+   ★★★  贺卡地址：吹灭蜡烛后跳转到这里  ★★★
+   ========================================================================== */
+const CARD_URL = "https://3dcards.theliang.com/letter/q03wJXlKqAWf";
+
+/* ============================================================================
+   ★★★  环绕照片：换成自己的图片即可（url 留空或加载失败自动降级为暖色卡片） ★★★
+   ========================================================================== */
+const MEMORY_PHOTOS = [
+  { url: "https://picsum.photos/seed/cake-01/720/540", caption: "那年冬天的第一块蛋糕" },
+  { url: "https://picsum.photos/seed/cake-02/720/540", caption: "一起吹过的蜡烛" },
+  { url: "https://picsum.photos/seed/cake-03/720/540", caption: "笑得最开心的一次" },
+  { url: "https://picsum.photos/seed/cake-04/720/540", caption: "还没讲完的故事" }
+];
+
+const TRANSITION = {
+  hold: 2500,
+  fade: 800,
+  navDelay: 250
+};
+
+const PEACE_HOLD = 0.7;    // ✌🏻 确认时长（秒）
+const THUMB_HOLD = 0.7;    // 👍🏻 确认时长（秒）
+
+import * as THREE from 'three';
+
+/* ============================================================================
+   0. 工具
+   ========================================================================== */
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const clamp01 = v => clamp(v, 0, 1);
+const damp = (cur, tar, lambda, dt) => cur + (tar - cur) * (1 - Math.exp(-lambda * dt));
+const rand = (a, b) => a + Math.random() * (b - a);
+const HEX = h => [((h >> 16) & 255) / 255, ((h >> 8) & 255) / 255, (h & 255) / 255];
+const mixC = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+const mulC = (c, k) => [clamp01(c[0] * k), clamp01(c[1] * k), clamp01(c[2] * k)];
+const jitC = (c, a = 0.045) => [
+  clamp01(c[0] + rand(-a, a)),
+  clamp01(c[1] + rand(-a, a)),
+  clamp01(c[2] + rand(-a, a))
+];
+
+const PAL = {
+  gold: HEX(0xffcf8a),
+  cream: HEX(0xfff3df),
+  pink: HEX(0xffb6c3),
+  flameCore: HEX(0xfff8d2),
+  flameOuter: HEX(0xff6a12),
+  trayCore: HEX(0xffd8a2),
+  trayMid: HEX(0xb87a3a),
+  trayOuter: HEX(0x633a1c),
+  dustA: HEX(0x9fc0ff),
+  dustB: HEX(0xffe3b0),
+  smokeA: HEX(0xe8f2ff),
+  smokeB: HEX(0xa9c6e8)
+};
+
+/* ============================================================================
+   1. 渲染基础
+   ========================================================================== */
+const canvas = document.getElementById('scene');
+const renderer = new THREE.WebGLRenderer({
+  canvas, antialias: true, alpha: false, powerPreference: 'high-performance'
+});
+renderer.setClearColor(0x06070c, 1);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 120);
+
+const cakeGroup = new THREE.Group();
+scene.add(cakeGroup);
+
+const state = {
+  spread: 0, spreadTarget: 0,
+  viewYaw: 0, viewYawTarget: 0,
+  viewPitch: 0.18, viewPitchTarget: 0.18,
+  dist: 6.4, distTarget: 6.4,
+  flame: 1, flameTarget: 1,
+  handSpin: 0, handSpinTarget: 0,
+  autoSpin: 0
+};
+let distScale = 1;
+
+const gesture = {
+  active: false,
+  lastSeen: 0,
+  openness: 0,
+  pinch: 0,
+  peace: false,
+  thumbsUp: false,
+  label: 'none'
+};
+
+/* ============================================================================
+   2. 仪式状态机
+   ---------------------------------------------------------------------------
+   unlit → lit → posed → gathered → blown
+   点燃    比耶   照片环绕   回到蛋糕    吹灭
+   ========================================================================== */
+const ritual = {
+  stage: 'unlit',
+  t: 0,
+  ignite: 0,
+  igniteTarget: 0,
+  burst: 0,
+  burstTarget: 0,
+  burstT: 0,
+  smoke: 0,
+  smokeT: 0,
+  air: 0,                 // 吹气强度（驱动火焰摇曳）
+  wish: 0,
+  wishTarget: 0,
+  wishT: 0,
+  holdPinch: 0,
+  holdPeace: 0,
+  holdThumb: 0,
+  photoOut: 0,            // 照片淡出进度 0..1
+  blowScore: 0,           // 持续吹气累计
+  leaving: false
+};
+
+/* ============================================================================
+   3. 粒子构建
+   ========================================================================== */
+const buf = { pos: [], sca: [], col: [], size: [], seed: [], flame: [] };
+const CAKE_CENTER_Y = 1.05;
+const CANDLE_TOP = 2.08;
+const FLAME_BASE = CANDLE_TOP + 0.02;
+
+function push(x, y, z, color, size, isFlame = 0) {
+  buf.pos.push(x, y, z);
+  buf.col.push(color[0], color[1], color[2]);
+  buf.size.push(size);
+  buf.seed.push(Math.random());
+  buf.flame.push(isFlame);
+
+  const theta = Math.random() * Math.PI * 2;
+  const phi = Math.acos(2 * Math.random() - 1);
+  const R = 2.2 + Math.pow(Math.random(), 0.65) * 6.0;
+  buf.sca.push(
+    Math.sin(phi) * Math.cos(theta) * R,
+    Math.cos(phi) * R * 0.68 + CAKE_CENTER_Y + 0.7,
+    Math.sin(phi) * Math.sin(theta) * R
+  );
+}
+
+const TIERS = [
+  { y0: 0.00, y1: 0.66, r: 1.62, n: 4600, a: 0xffc077, b: 0xfff3df },
+  { y0: 0.66, y1: 1.18, r: 1.16, n: 3400, a: 0xffb3c1, b: 0xfff0e6 },
+  { y0: 1.18, y1: 1.60, r: 0.78, n: 2400, a: 0xffd79a, b: 0xfffdf7 }
+];
+
+for (const T of TIERS) {
+  const h = T.y1 - T.y0;
+  const cA = HEX(T.a);
+  const cB = HEX(T.b);
+  const nSide = Math.floor(T.n * 0.54);
+  const nTop = Math.floor(T.n * 0.30);
+  const nRim = T.n - nSide - nTop;
+
+  for (let i = 0; i < nSide; i++) {
+    const ang = Math.random() * Math.PI * 2;
+    const t = Math.random();
+    const taper = 1 - 0.045 * t;
+    const r = T.r * taper * rand(0.982, 1.012);
+    const y = T.y0 + t * h;
+    push(Math.cos(ang) * r, y, Math.sin(ang) * r, jitC(mixC(cA, cB, 0.12 + 0.6 * t)), rand(1.4, 2.9));
+  }
+  for (let i = 0; i < nTop; i++) {
+    const ang = Math.random() * Math.PI * 2;
+    const rr = T.r * Math.sqrt(Math.random()) * 0.97;
+    const y = T.y1 + rand(-0.012, 0.012);
+    push(Math.cos(ang) * rr, y, Math.sin(ang) * rr, jitC(mixC(cA, cB, 0.55 + 0.45 * Math.random())), rand(1.3, 2.3));
+  }
+  for (let i = 0; i < nRim; i++) {
+    const ang = Math.random() * Math.PI * 2;
+    const r = T.r * rand(0.955, 1.005);
+    const y = T.y1 + rand(-0.02, 0.02);
+    push(Math.cos(ang) * r, y, Math.sin(ang) * r, mulC(mixC(cA, cB, 0.85), 1.12), rand(1.8, 3.4));
+  }
+}
+
+for (let i = 0; i < 280; i++) {
+  const ang = Math.random() * Math.PI * 2;
+  const rr = 0.78 * Math.sqrt(Math.random()) * 0.9;
+  const c = Math.random() < 0.5 ? PAL.pink : (Math.random() < 0.5 ? PAL.gold : PAL.cream);
+  push(Math.cos(ang) * rr, 1.60 + rand(0.005, 0.03), Math.sin(ang) * rr, mulC(c, 1.15), rand(2.0, 3.2));
+}
+
+for (let i = 0; i < 520; i++) {
+  const ang = Math.random() * Math.PI * 2;
+  const y = rand(1.60, CANDLE_TOP);
+  const r = 0.048 * rand(0.88, 1.12);
+  const c = mixC(HEX(0xfff6e8), HEX(0xffd9d2), Math.random());
+  push(Math.cos(ang) * r, y, Math.sin(ang) * r, c, rand(1.3, 2.2));
+}
+for (let i = 0; i < 36; i++) {
+  push(rand(-0.008, 0.008), rand(CANDLE_TOP - 0.02, CANDLE_TOP + 0.035), rand(-0.008, 0.008), HEX(0x4a2b1a), 1.6);
+}
+
+for (let i = 0; i < 900; i++) {
+  const t = Math.pow(Math.random(), 0.72);
+  const y = FLAME_BASE + t * 0.44;
+  const rad = 0.115 * Math.sin(Math.PI * Math.pow(t, 0.72)) * rand(0.3, 1.0);
+  const ang = Math.random() * Math.PI * 2;
+  const c = mixC(PAL.flameCore, PAL.flameOuter, clamp01(t * 1.05 + Math.random() * 0.25));
+  push(Math.cos(ang) * rad, y, Math.sin(ang) * rad, c, rand(1.5, 3.6), 1);
+}
+
+for (let i = 0; i < 460; i++) {
+  const ang = Math.random() * Math.PI * 2;
+  const r = 0.05 * Math.sqrt(Math.random());
+  const c = mixC(PAL.smokeA, PAL.smokeB, Math.random());
+  push(Math.cos(ang) * r, FLAME_BASE + rand(-0.02, 0.06), Math.sin(ang) * r,
+    mulC(c, rand(0.6, 1.0)), rand(2.0, 4.2), 2);
+}
+
+for (let i = 0; i < 900; i++) {
+  const ang = Math.random() * Math.PI * 2;
+  const rr = 1.95 * Math.sqrt(Math.random());
+  push(Math.cos(ang) * rr, rand(-0.045, -0.02), Math.sin(ang) * rr,
+    jitC(mixC(PAL.trayMid, PAL.trayOuter, rr / 1.95)), rand(1.2, 2.0));
+}
+for (let i = 0; i < 1200; i++) {
+  const ang = Math.random() * Math.PI * 2;
+  const rr = rand(2.0, 2.22);
+  push(Math.cos(ang) * rr, rand(-0.04, 0.0), Math.sin(ang) * rr,
+    mulC(mixC(PAL.trayCore, PAL.gold, Math.random()), 1.1), rand(2.0, 3.6));
+}
+for (let i = 0; i < 500; i++) {
+  const ang = Math.random() * Math.PI * 2;
+  const rr = rand(2.24, 2.75);
+  push(Math.cos(ang) * rr, rand(-0.05, -0.01), Math.sin(ang) * rr,
+    mulC(PAL.trayCore, rand(0.22, 0.5)), rand(2.2, 4.0));
+}
+
+const cakeGeo = new THREE.BufferGeometry();
+cakeGeo.setAttribute('position', new THREE.Float32BufferAttribute(buf.pos, 3));
+cakeGeo.setAttribute('aScatter', new THREE.Float32BufferAttribute(buf.sca, 3));
+cakeGeo.setAttribute('aColor', new THREE.Float32BufferAttribute(buf.col, 3));
+cakeGeo.setAttribute('aSize', new THREE.Float32BufferAttribute(buf.size, 1));
+cakeGeo.setAttribute('aSeed', new THREE.Float32BufferAttribute(buf.seed, 1));
+cakeGeo.setAttribute('aFlame', new THREE.Float32BufferAttribute(buf.flame, 1));
+
+/* ============================================================================
+   4. 着色器
+   ========================================================================== */
+const CAKE_VERT = /* glsl */`
+uniform float uTime;
+uniform float uSpread;
+uniform float uSize;
+uniform float uPixelRatio;
+uniform float uFlame;
+uniform float uIgnite;
+uniform float uBurst;
+uniform float uSmoke;
+uniform float uSmokeT;
+uniform float uAir;      // 吹气强度：让火焰随气流摇曳
+
+attribute vec3 aScatter;
+attribute vec3 aColor;
+attribute float aSize;
+attribute float aSeed;
+attribute float aFlame;
+
+varying vec3 vColor;
+varying float vAlpha;
+
+void main() {
+  vec3 pos = position;
+  float s = uSpread;
+
+  vec3 neb = aScatter;
+  float ang = uTime * (0.10 + aSeed * 0.20) + s * (0.5 + aSeed);
+  float ca = cos(ang);
+  float sa = sin(ang);
+  neb.xz = vec2(neb.x * ca - neb.z * sa, neb.x * sa + neb.z * ca);
+  neb.y += sin(uTime * 0.7 + aSeed * 6.2831) * (0.12 + 0.38 * s);
+  neb.x += cos(uTime * 0.5 + aSeed * 9.0) * 0.22 * s;
+
+  pos = mix(pos, neb, s);
+
+  if (uBurst > 0.001) {
+    pos.y += uBurst * (0.55 + aSeed * 2.0);
+    pos.xz *= 1.0 + uBurst * (0.30 + aSeed * 0.75);
+    pos.x += sin(uTime * 2.4 + aSeed * 31.0) * uBurst * 0.30;
+    pos.z += cos(uTime * 2.1 + aSeed * 27.0) * uBurst * 0.30;
+  }
+
+  float kind = aFlame;
+  float sizeMul = 1.0;
+  float alpha = 1.0;
+  vec3 col = aColor;
+
+  if (kind > 0.5 && kind < 1.5) {
+    /* —— 火焰：基础抖动 + 被风吹偏 —— */
+    pos.x += sin(uTime * 7.0 + aSeed * 41.0) * 0.020;
+    pos.z += cos(uTime * 6.3 + aSeed * 33.0) * 0.020;
+    pos.y += sin(uTime * 5.1 + aSeed * 27.0) * 0.022;
+
+    // 吹气：火苗压短、向一侧倒伏并高频抖动
+    float gust = uAir * (0.55 + 0.45 * sin(uTime * 22.0 + aSeed * 37.0));
+    pos.x += gust * (0.10 + aSeed * 0.16);
+    pos.z += gust * (0.04 + aSeed * 0.10);
+    pos.y -= gust * 0.09;
+
+    float flic  = 0.72 + 0.28 * sin(uTime * 9.0 + aSeed * 21.0);
+    float flic2 = 0.86 + 0.14 * sin(uTime * 17.0 + aSeed * 8.0);
+    col *= uFlame * flic * flic2 * 1.18 * (1.0 - uAir * 0.25);
+    alpha = 0.92 * uIgnite;
+    sizeMul = (0.30 + 0.70 * uIgnite) * (1.0 - uAir * 0.3);
+  } else if (kind > 1.5) {
+    float life = fract(uSmokeT * 0.5 + aSeed * 0.5);
+    pos.y += life * 1.35;
+    pos.x += sin(life * 5.0 + aSeed * 23.0) * 0.26 * life;
+    pos.z += cos(life * 4.4 + aSeed * 17.0) * 0.26 * life;
+    alpha = (1.0 - life) * 0.46 * uSmoke;
+    sizeMul = 0.7 + life * 2.0;
+    col *= 0.6 + 0.4 * (1.0 - life);
+  } else {
+    pos += vec3(
+      sin(uTime * 0.8 + aSeed * 12.0),
+      cos(uTime * 0.7 + aSeed * 9.0),
+      sin(uTime * 0.9 + aSeed * 15.0)
+    ) * (0.012 * (1.0 - s));
+    col *= 1.0 + uIgnite * 0.20;
+  }
+
+  col = mix(col, vec3(1.0, 0.84, 0.47), uBurst * (kind > 1.5 ? 0.18 : 0.48));
+  col *= 1.0 + uBurst * 0.9;
+  col *= 1.0 + s * 0.12;
+
+  sizeMul *= 1.0 + uBurst * 0.55;
+
+  vec4 mv = modelViewMatrix * vec4(pos, 1.0);
+  gl_Position = projectionMatrix * mv;
+
+  float ps = aSize * uSize * uPixelRatio * (1.0 + s * 0.5) * sizeMul;
+  gl_PointSize = clamp(ps * (10.0 / max(0.001, -mv.z)), 0.6, 40.0);
+
+  alpha *= mix(1.0, 0.78, s);
+  vColor = col;
+  vAlpha = alpha;
+}
+`;
+
+const FRAG = /* glsl */`
+varying vec3 vColor;
+varying float vAlpha;
+
+void main() {
+  vec2 uv = gl_PointCoord - 0.5;
+  float d = length(uv);
+  if (d > 0.5) discard;
+
+  float soft = 1.0 - smoothstep(0.0, 0.5, d);
+  float core = pow(soft, 2.6);
+  vec3 col = vColor * (0.6 + 2.4 * core);
+  gl_FragColor = vec4(col, core * vAlpha);
+}
+`;
+
+const cakeMat = new THREE.ShaderMaterial({
+  uniforms: {
+    uTime: { value: 0 },
+    uSpread: { value: 0 },
+    uSize: { value: 1 },
+    uPixelRatio: { value: 1 },
+    uFlame: { value: 1 },
+    uIgnite: { value: 0 },
+    uBurst: { value: 0 },
+    uSmoke: { value: 0 },
+    uSmokeT: { value: 0 },
+    uAir: { value: 0 }
+  },
+  vertexShader: CAKE_VERT,
+  fragmentShader: FRAG,
+  transparent: true,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending
+});
+
+const cakePoints = new THREE.Points(cakeGeo, cakeMat);
+cakePoints.frustumCulled = false;
+cakePoints.renderOrder = 2;
+cakeGroup.add(cakePoints);
+
+/* ============================================================================
+   5. 背景环境微粒
+   ========================================================================== */
+const DUST_N = 5200;
+const dpos = [], dcol = [], dsize = [], dseed = [];
+for (let i = 0; i < DUST_N; i++) {
+  const theta = Math.random() * Math.PI * 2;
+  const phi = Math.acos(2 * Math.random() - 1);
+  const R = 5.5 + Math.pow(Math.random(), 0.55) * 13;
+  dpos.push(
+    Math.sin(phi) * Math.cos(theta) * R,
+    Math.cos(phi) * R * 0.75 + 1.4,
+    Math.sin(phi) * Math.sin(theta) * R
+  );
+  const c = Math.random() < 0.62 ? PAL.dustA : PAL.dustB;
+  const dim = rand(0.2, 0.62);
+  dcol.push(c[0] * dim, c[1] * dim, c[2] * dim);
+  dsize.push(rand(0.8, 2.6));
+  dseed.push(Math.random());
+}
+const dustGeo = new THREE.BufferGeometry();
+dustGeo.setAttribute('position', new THREE.Float32BufferAttribute(dpos, 3));
+dustGeo.setAttribute('aColor', new THREE.Float32BufferAttribute(dcol, 3));
+dustGeo.setAttribute('aSize', new THREE.Float32BufferAttribute(dsize, 1));
+dustGeo.setAttribute('aSeed', new THREE.Float32BufferAttribute(dseed, 1));
+
+const dustMat = new THREE.ShaderMaterial({
+  uniforms: {
+    uTime: { value: 0 },
+    uSpread: { value: 0 },
+    uSize: { value: 1 },
+    uPixelRatio: { value: 1 },
+    uWish: { value: 0 },
+    uWishT: { value: 0 },
+    uBurst: { value: 0 }
+  },
+  vertexShader: /* glsl */`
+    uniform float uTime;
+    uniform float uSpread;
+    uniform float uSize;
+    uniform float uPixelRatio;
+    uniform float uWish;
+    uniform float uWishT;
+    uniform float uBurst;
+
+    attribute vec3 aColor;
+    attribute float aSize;
+    attribute float aSeed;
+
+    varying vec3 vColor;
+    varying float vAlpha;
+
+    void main() {
+      vec3 pos = position;
+      pos.x += sin(uTime * 0.11 + aSeed * 11.0) * 0.75;
+      pos.y += cos(uTime * 0.09 + aSeed * 7.0) * 0.65;
+      pos.z += sin(uTime * 0.10 + aSeed * 5.0) * 0.75;
+      pos *= 1.0 + uSpread * 0.12;
+
+      if (uWish > 0.001) {
+        float spin = uWish * (0.35 + aSeed * 1.15) * uWishT;
+        float cw = cos(spin);
+        float sw = sin(spin);
+        pos.xz = vec2(pos.x * cw - pos.z * sw, pos.x * sw + pos.z * cw);
+        pos.y += uWish * min(uWishT * 0.42, 2.8) * (0.35 + aSeed);
+      }
+
+      pos.y += uBurst * (1.2 + aSeed * 2.2);
+      pos.xz *= 1.0 + uBurst * 0.35;
+
+      vec4 mv = modelViewMatrix * vec4(pos, 1.0);
+      gl_Position = projectionMatrix * mv;
+      gl_PointSize = clamp(aSize * uSize * uPixelRatio * (4.0 / max(0.001, -mv.z)), 0.6, 6.0);
+
+      float tw = 0.5 + 0.5 * sin(uTime * 1.7 + aSeed * 40.0);
+      vColor = aColor * (1.0 + uWish * 0.45) * (1.0 + uBurst * 0.9);
+      vColor = mix(vColor, vec3(1.0, 0.86, 0.58), uBurst * 0.55);
+      vAlpha = (0.10 + 0.45 * tw) * (1.0 + uWish * 0.55);
+    }
+  `,
+  fragmentShader: FRAG,
+  transparent: true,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending
+});
+
+const dustPoints = new THREE.Points(dustGeo, dustMat);
+dustPoints.frustumCulled = false;
+scene.add(dustPoints);
+
+/* ============================================================================
+   6. 光晕
+   ========================================================================== */
+function makeGlowTexture() {
+  const s = 128;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = s;
+  const ctx = cv.getContext('2d');
+  const g = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+  g.addColorStop(0.00, 'rgba(255,240,200,1)');
+  g.addColorStop(0.22, 'rgba(255,196,110,0.55)');
+  g.addColorStop(0.55, 'rgba(255,140,60,0.13)');
+  g.addColorStop(1.00, 'rgba(255,120,40,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, s, s);
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+const glowTex = makeGlowTexture();
+
+const flameGlow = new THREE.Sprite(new THREE.SpriteMaterial({
+  map: glowTex, color: 0xffc06a, transparent: true,
+  blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.9
+}));
+flameGlow.scale.set(1.5, 1.5, 1);
+flameGlow.position.set(0, FLAME_BASE + 0.16, 0);
+cakeGroup.add(flameGlow);
+
+const groundGlow = new THREE.Mesh(
+  new THREE.PlaneGeometry(7.2, 7.2),
+  new THREE.MeshBasicMaterial({
+    map: glowTex, color: 0xff9c46, transparent: true, opacity: 0.42,
+    blending: THREE.AdditiveBlending, depthWrite: false
+  })
+);
+groundGlow.rotation.x = -Math.PI / 2;
+groundGlow.position.y = -0.06;
+scene.add(groundGlow);
+
+const burstGlow = new THREE.Sprite(new THREE.SpriteMaterial({
+  map: glowTex, color: 0xffe0b0, transparent: true,
+  blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0
+}));
+burstGlow.position.set(0, 1.15, 0);
+burstGlow.scale.set(2.5, 2.5, 1);
+burstGlow.visible = false;
+scene.add(burstGlow);
+
+/* ============================================================================
+   7. 环绕照片（质感版）
+   ========================================================================== */
+const photoGroup = new THREE.Group();
+photoGroup.visible = false;
+scene.add(photoGroup);
+
+const CARD_W = 512;
+const CARD_H = 400;
+const CARD_GEO = new THREE.PlaneGeometry(1.42, 1.11);
+
+const photos = [];
+let photosActive = false;
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+/** 画一张「相纸」：奶油金相框 + 圆角照片 + 底部配文 */
+function paintCard(cv, ctx, img, caption) {
+  const W = CARD_W, H = CARD_H;
+  ctx.clearRect(0, 0, W, H);
+
+  // 相纸外框（暖金渐变）
+  const frame = ctx.createLinearGradient(0, 0, W, H);
+  frame.addColorStop(0, '#f7ead4');
+  frame.addColorStop(0.52, '#e2c69b');
+  frame.addColorStop(1, '#c3a071');
+  roundRect(ctx, 3, 3, W - 6, H - 6, 30);
+  ctx.fillStyle = frame;
+  ctx.fill();
+
+  // 相纸内缘的一圈高光
+  roundRect(ctx, 3, 3, W - 6, H - 6, 30);
+  ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // 照片区域
+  const px = 22, py = 22, pw = W - 44, ph = H - 44 - 62;
+  ctx.save();
+  roundRect(ctx, px, py, pw, ph, 16);
+  ctx.clip();
+
+  if (img) {
+    const sr = img.width / img.height;
+    const dr = pw / ph;
+    let sw, sh, sx, sy;
+    if (sr > dr) { sh = img.height; sw = sh * dr; sx = (img.width - sw) / 2; sy = 0; }
+    else { sw = img.width; sh = sw / dr; sx = 0; sy = (img.height - sh) / 2; }
+    ctx.drawImage(img, sx, sy, sw, sh, px, py, pw, ph);
+  } else {
+    const g = ctx.createRadialGradient(px + pw / 2, py + ph * 0.42, 10, px + pw / 2, py + ph * 0.42, pw * 0.72);
+    g.addColorStop(0, '#ffcf8a');
+    g.addColorStop(0.45, '#c9782f');
+    g.addColorStop(1, '#4a2a12');
+    ctx.fillStyle = g;
+    ctx.fillRect(px, py, pw, ph);
+    ctx.fillStyle = 'rgba(255,246,226,0.92)';
+    ctx.font = '600 54px "PingFang SC","Microsoft YaHei",serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('✦', px + pw / 2, py + ph * 0.4);
+    ctx.font = '500 22px "PingFang SC","Microsoft YaHei",sans-serif';
+    ctx.fillStyle = 'rgba(255,246,226,0.65)';
+    ctx.fillText('回忆加载中', px + pw / 2, py + ph * 0.66);
+  }
+
+  // 照片下沿压暗，让相纸过渡自然
+  const shade = ctx.createLinearGradient(0, py + ph * 0.7, 0, py + ph);
+  shade.addColorStop(0, 'rgba(0,0,0,0)');
+  shade.addColorStop(1, 'rgba(0,0,0,0.28)');
+  ctx.fillStyle = shade;
+  ctx.fillRect(px, py + ph * 0.7, pw, ph * 0.3);
+  ctx.restore();
+
+  // 照片描边
+  roundRect(ctx, px, py, pw, ph, 16);
+  ctx.strokeStyle = 'rgba(90,62,32,0.35)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // 底部配文（相纸上的深色字）
+  const cap = (caption || '').slice(0, 16);
+  if (cap) {
+    ctx.fillStyle = 'rgba(74,52,28,0.88)';
+    ctx.font = '600 26px "PingFang SC","Microsoft YaHei",sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(cap, W / 2, H - 43);
+  }
+}
+
+/** 悬停高亮用的描边贴图（所有卡片共用一张） */
+function makeFrameGlowTexture() {
+  const cv = document.createElement('canvas');
+  cv.width = CARD_W;
+  cv.height = CARD_H;
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, CARD_W, CARD_H);
+  roundRect(ctx, 5, 5, CARD_W - 10, CARD_H - 10, 28);
+  ctx.strokeStyle = 'rgba(255,235,200,1)';
+  ctx.lineWidth = 7;
+  ctx.shadowColor = 'rgba(255,200,120,1)';
+  ctx.shadowBlur = 22;
+  ctx.stroke();
+  ctx.stroke();
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+const frameGlowTex = makeFrameGlowTexture();
+
+function createPhotoCard(item, index) {
+  const cv = document.createElement('canvas');
+  cv.width = CARD_W;
+  cv.height = CARD_H;
+  const ctx = cv.getContext('2d');
+  paintCard(cv, ctx, null, item.caption);
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+
+  const mat = new THREE.MeshBasicMaterial({
+    map: tex, transparent: true, depthWrite: false,
+    side: THREE.DoubleSide, toneMapped: false, opacity: 0
+  });
+  const mesh = new THREE.Mesh(CARD_GEO, mat);
+  mesh.renderOrder = 3;
+
+  // 背后柔光
+  const haloMat = new THREE.MeshBasicMaterial({
+    map: glowTex, color: 0xffb86a, transparent: true,
+    blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0
+  });
+  const halo = new THREE.Mesh(new THREE.PlaneGeometry(2.7, 2.2), haloMat);
+  halo.position.z = -0.02;
+  mesh.add(halo);
+
+  // 悬停高光边框
+  const glowMat = new THREE.MeshBasicMaterial({
+    map: frameGlowTex, transparent: true,
+    blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.1
+  });
+  const glow = new THREE.Mesh(CARD_GEO, glowMat);
+  glow.position.z = 0.004;
+  mesh.add(glow);
+
+  const card = {
+    index, item, canvas: cv, ctx, tex, mesh, mat, haloMat, glowMat,
+    angle0: (index / MEMORY_PHOTOS.length) * Math.PI * 2,
+    radius: 4.05 + (index % 2) * 0.35,
+    y0: 1.15 + (index % 2 === 0 ? 0.42 : -0.30),
+    speed: 0.30,
+    appear: 0,
+    hover: 0,
+    appearAt: 0,
+    imageOk: false
+  };
+
+  mesh.userData.card = card;
+  photoGroup.add(mesh);
+  return card;
+}
+
+function loadPhotoImage(card) {
+  const url = (card.item.url || '').trim();
+  if (!url) return;
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  let done = false;
+  const finish = ok => {
+    if (done) return;
+    done = true;
+    card.imageOk = !!(ok && img.naturalWidth);
+    if (card.imageOk) {
+      paintCard(card.canvas, card.ctx, img, card.item.caption);
+      card.tex.needsUpdate = true;
+    }
+  };
+  img.onload = () => finish(true);
+  img.onerror = () => finish(false);
+  setTimeout(() => finish(false), 8000);
+  img.src = url;
+}
+
+MEMORY_PHOTOS.forEach((item, i) => {
+  const card = createPhotoCard(item, i);
+  photos.push(card);
+  loadPhotoImage(card);
+});
+
+/* ============================================================================
+   8. UI 引用
+   ========================================================================== */
+const $ = id => document.getElementById(id);
+const bootEl = $('boot');
+const statusEl = $('gesture-status');
+const dotEl = $('cam-dot');
+const barOpen = $('bar-open');
+const barPinch = $('bar-pinch');
+const fpsEl = $('fps');
+const hintEl = $('hint');
+const btnCam = $('btn-cam');
+const videoEl = $('input-video');
+const overlayCanvas = $('overlay-canvas');
+const overlayCtx = overlayCanvas.getContext('2d');
+const camPlaceholder = $('cam-placeholder');
+const stepperEl = $('stepper');
+const ritualEl = $('ritual');
+const giftCardEl = $('gift-card');
+const giftMaskEl = $('gift-mask');
+const giftBarEl = $('gift-bar');
+const viewerEl = $('viewer');
+const viewerImg = $('viewer-img');
+const viewerSkel = $('viewer-skel');
+const viewerFallback = $('viewer-fallback');
+const viewerCapText = $('viewer-cap-text');
+const viewerCapIdx = $('viewer-cap-idx');
+const photoTipEl = $('photo-tip');
+
+function setStatus(text, active = false) {
+  if (statusEl.textContent === text) return;
+  statusEl.textContent = text;
+  statusEl.classList.toggle('active', active);
+}
+
+/* ============================================================================
+   9. 指针交互
+   ========================================================================== */
+let dragging = false;
+let lastX = 0, lastY = 0;
+let dragDist = 0;
+let downTime = 0;
+let pointerX = 0, pointerY = 0;
+
+const raycaster = new THREE.Raycaster();
+const pointerNDC = new THREE.Vector2(-10, -10);
+let hoveredCard = null;
+
+function setNDC(clientX, clientY) {
+  pointerNDC.x = (clientX / window.innerWidth) * 2 - 1;
+  pointerNDC.y = -(clientY / window.innerHeight) * 2 + 1;
+}
+
+function pickPhoto(clientX, clientY) {
+  if (!photosActive) return null;
+  setNDC(clientX, clientY);
+  raycaster.setFromCamera(pointerNDC, camera);
+  const hits = raycaster.intersectObjects(photoGroup.children, false);
+  return hits.length ? hits[0].object.userData.card : null;
+}
+
+canvas.addEventListener('pointerdown', e => {
+  dragging = true;
+  dragDist = 0;
+  downTime = performance.now();
+  lastX = e.clientX;
+  lastY = e.clientY;
+  pointerX = e.clientX;
+  pointerY = e.clientY;
+  canvas.classList.add('dragging');
+  try { canvas.setPointerCapture?.(e.pointerId); } catch (_) {}
+});
+
+canvas.addEventListener('pointermove', e => {
+  pointerX = e.clientX;
+  pointerY = e.clientY;
+  setNDC(e.clientX, e.clientY);
+  if (!dragging) return;
+  const dx = e.clientX - lastX;
+  const dy = e.clientY - lastY;
+  lastX = e.clientX;
+  lastY = e.clientY;
+  dragDist += Math.abs(dx) + Math.abs(dy);
+
+  state.viewYawTarget -= dx * 0.0058;
+  state.viewPitchTarget = clamp(state.viewPitchTarget + dy * 0.0045, -0.28, 1.12);
+});
+
+const _v3 = new THREE.Vector3();
+function nearCandle(e) {
+  _v3.set(0, FLAME_BASE + 0.22, 0).project(camera);
+  const sx = (_v3.x * 0.5 + 0.5) * window.innerWidth;
+  const sy = (-_v3.y * 0.5 + 0.5) * window.innerHeight;
+  return Math.hypot(e.clientX - sx, e.clientY - sy) < 140;
+}
+
+function endDrag(e) {
+  if (!dragging) return;
+  dragging = false;
+  canvas.classList.remove('dragging');
+  try { canvas.releasePointerCapture?.(e?.pointerId); } catch (_) {}
+
+  if (dragDist < 8 && performance.now() - downTime < 450) {
+    const card = e ? pickPhoto(e.clientX, e.clientY) : null;
+    if (card) { openViewer(card.index); return; }
+
+    if (ritual.stage === 'unlit' && e && nearCandle(e)) { igniteCandle('点击蜡烛'); return; }
+    if (ritual.stage === 'gathered' && e && nearCandle(e)) { blowOut('点击蜡烛'); return; }
+
+    state.spreadTarget = state.spreadTarget > 0.5 ? 0 : 1;
+  }
+}
+canvas.addEventListener('pointerup', endDrag);
+canvas.addEventListener('pointercancel', endDrag);
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  state.distTarget = clamp(state.distTarget * (1 + Math.sign(e.deltaY) * 0.085), 3.4, 9.6);
+}, { passive: false });
+
+$('btn-scatter').addEventListener('click', () => { state.spreadTarget = 1; });
+$('btn-gather').addEventListener('click', () => {
+  if (ritual.stage === 'posed') return;
+  state.spreadTarget = 0;
+});
+$('btn-reset').addEventListener('click', () => {
+  state.viewYawTarget = 0;
+  state.viewPitchTarget = 0.18;
+  state.distTarget = 6.4;
+  state.handSpinTarget = 0;
+  state.flameTarget = 1;
+  gesture.openness = 0;
+  gesture.pinch = 0;
+});
+
+/* ============================================================================
+   10. MediaPipe Hands
+   ========================================================================== */
+let hands = null;
+let stream = null;
+let cameraOn = false;
+let mpBusy = false;
+let lastSend = 0;
+
+const HAND_CONNECTIONS = [
+  [0, 1], [1, 2], [2, 3], [3, 4],
+  [0, 5], [5, 6], [6, 7], [7, 8],
+  [5, 9], [9, 10], [10, 11], [11, 12],
+  [9, 13], [13, 14], [14, 15], [15, 16],
+  [13, 17], [17, 18], [18, 19], [19, 20],
+  [0, 17]
+];
+
+function setCamUI(on) {
+  btnCam.textContent = on ? '关闭摄像头' : '开启摄像头';
+  btnCam.classList.toggle('on', on);
+  dotEl.className = 'dot' + (on ? ' live' : '');
+  camPlaceholder.style.display = on ? 'none' : 'flex';
+  hintEl.textContent = on
+    ? '✌🏻 展开照片 · 👍🏻 回到蛋糕 · 张开手掌扩散'
+    : '拖拽旋转 · 滚轮缩放 · 点击画面切换扩散 / 聚拢';
+}
+
+async function waitForHands(timeout = 12000) {
+  const t0 = performance.now();
+  while (typeof window.Hands !== 'function' && performance.now() - t0 < timeout) {
+    await new Promise(r => setTimeout(r, 120));
+  }
+  return typeof window.Hands === 'function';
+}
+
+async function startCamera() {
+  if (cameraOn) return;
+  btnCam.disabled = true;
+  setStatus('正在启动摄像头…');
+  dotEl.className = 'dot wait';
+
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error('浏览器不支持摄像头');
+    }
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
+      audio: false
+    });
+    videoEl.srcObject = stream;
+    await videoEl.play();
+
+    if (!(await waitForHands())) throw new Error('手势识别库未加载');
+
+    if (!hands) {
+      hands = new window.Hands({
+        locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${f}`
+      });
+      hands.setOptions({
+        maxNumHands: 1,
+        modelComplexity: 0,
+        minDetectionConfidence: 0.6,
+        minTrackingConfidence: 0.55,
+        selfieMode: false
+      });
+      hands.onResults(onHandResults);
+    }
+
+    cameraOn = true;
+    setCamUI(true);
+    setStatus('摄像头已开启 · 请把手放进画面', true);
+    pump();
+  } catch (err) {
+    console.warn('[camera]', err);
+    const msg = err && err.message ? err.message : String(err);
+    setStatus('摄像头不可用：' + msg + ' · 已切换到鼠标模式');
+    dotEl.className = 'dot';
+    stopCamera(true);
+  } finally {
+    btnCam.disabled = false;
+  }
+}
+
+function stopCamera(silent = false) {
+  cameraOn = false;
+  if (stream) {
+    stream.getTracks().forEach(t => t.stop());
+    stream = null;
+  }
+  try { videoEl.srcObject = null; } catch (_) {}
+  overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+  gesture.active = false;
+  gesture.openness = 0;
+  gesture.pinch = 0;
+  setCamUI(false);
+  dotEl.className = 'dot';
+  if (!silent) setStatus('摄像头已关闭 · 鼠标模式可用');
+}
+
+async function pump() {
+  if (!cameraOn) return;
+  const now = performance.now();
+  if (!mpBusy && now - lastSend > 55 && videoEl.readyState >= 2) {
+    lastSend = now;
+    mpBusy = true;
+    try {
+      await hands.send({ image: videoEl });
+    } catch (e) { /* ignore single frame */ }
+    mpBusy = false;
+  }
+  if (cameraOn) requestAnimationFrame(pump);
+}
+
+btnCam.addEventListener('click', () => {
+  if (cameraOn) stopCamera();
+  else startCamera();
+});
+
+function onHandResults(results) {
+  drawOverlay(results);
+
+  const list = results.multiHandLandmarks;
+  if (!list || list.length === 0) {
+    gesture.active = false;
+    if (performance.now() - gesture.lastSeen > 800) {
+      setStatus('未检测到手 · 可继续用鼠标操作');
+      barOpen.style.width = (state.spread * 100) + '%';
+      barPinch.style.width = '0%';
+    }
+    return;
+  }
+
+  gesture.active = true;
+  gesture.lastSeen = performance.now();
+  analyzeHand(list[0]);
+}
+
+let lastHandTime = 0;
+
+function analyzeHand(lm) {
+  const d = (i, j) => Math.hypot(
+    lm[i].x - lm[j].x,
+    lm[i].y - lm[j].y,
+    (lm[i].z - lm[j].z) * 0.6
+  );
+
+  const palm = Math.max(0.02, d(0, 9));
+
+  const indexExt = d(8, 0) > d(6, 0) * 1.12;
+  const middleExt = d(12, 0) > d(10, 0) * 1.12;
+  const ringExt = d(16, 0) > d(14, 0) * 1.12;
+  const pinkyExt = d(20, 0) > d(18, 0) * 1.12;
+
+  let ext = 0;
+  if (indexExt) ext++;
+  if (middleExt) ext++;
+  if (ringExt) ext++;
+  if (pinkyExt) ext++;
+  const thumbExt = d(4, 17) / palm > 1.08;
+
+  const opennessRaw = clamp01((ext + (thumbExt ? 1 : 0)) / 5);
+  const pinchRaw = clamp01((0.62 - d(4, 8) / palm) / 0.42);
+
+  // ✌🏻：食指 + 中指伸直，无名指 + 小指收拢
+  const peace = indexExt && middleExt && !ringExt && !pinkyExt;
+
+  // 👍🏻：拇指向上伸展（指尖明显高于拇指根部），其余四指全部收拢
+  const noFingers = !indexExt && !middleExt && !ringExt && !pinkyExt;
+  const thumbUp = thumbExt &&
+    lm[4].y < lm[2].y - 0.02 &&                       // 指尖高于拇指根部
+    Math.abs(lm[4].x - lm[2].x) < 0.20 &&             // 竖直而非横伸
+    d(4, 0) / palm > 1.05;
+  const thumbsUp = noFingers && thumbUp;
+
+  gesture.peace = peace;
+  gesture.thumbsUp = thumbsUp;
+
+  gesture.openness = damp(gesture.openness, opennessRaw, 9, 1 / 30);
+  gesture.pinch = damp(gesture.pinch, pinchRaw, 9, 1 / 30);
+
+  // 照片星环阶段锁定最大分散
+  if (gesture.pinch < 0.6 && ritual.stage !== 'posed') {
+    state.spreadTarget = clamp01((gesture.openness - 0.32) / 0.56);
+  }
+
+  const cx = (lm[0].x + lm[5].x + lm[9].x + lm[13].x + lm[17].x) / 5;
+  const cy = (lm[0].y + lm[5].y + lm[9].y + lm[13].y + lm[17].y) / 5;
+  const mx = 1 - cx;
+  state.handSpinTarget = (mx - 0.5) * Math.PI * 1.4;
+  state.viewPitchTarget = clamp(0.18 + (cy - 0.45) * 1.1, -0.25, 1.05);
+
+  if (ritual.stage !== 'posed') {
+    state.distTarget = clamp(6.4 - gesture.pinch * 2.0, 3.6, 9.6);
+  }
+  state.flameTarget = 1.0 + gesture.pinch * 0.85;
+
+  const nowH = performance.now();
+  const hdt = lastHandTime ? clamp((nowH - lastHandTime) / 1000, 0.01, 0.25) : 1 / 30;
+  lastHandTime = nowH;
+  updateRitualGestures(hdt);
+
+  // 状态文案：✌🏻 / 👍🏻 的进度要给足反馈；吹蜡烛阶段不覆盖（那里显示吹气进度）
+  if (ritual.stage !== 'gathered' && ritual.stage !== 'blown') {
+    let label;
+    if (ritual.stage === 'lit' && peace) {
+      label = `检测到：比耶 ✌🏻 · 保持 ${Math.round(clamp01(ritual.holdPeace / PEACE_HOLD) * 100)}%`;
+    } else if (ritual.stage === 'posed' && thumbsUp) {
+      label = `检测到：点赞 👍🏻 · 保持 ${Math.round(clamp01(ritual.holdThumb / THUMB_HOLD) * 100)}% 回蛋糕`;
+    } else if (ritual.stage === 'posed') {
+      label = '照片环绕中 · 比个赞 👍🏻 回到蛋糕';
+    } else if (gesture.pinch > 0.62) {
+      label = `检测到：捏合 · 拉近 ${Math.round(gesture.pinch * 100)}%`;
+    } else if (gesture.openness > 0.74) {
+      label = `检测到：张开手掌 · 扩散 ${Math.round(state.spreadTarget * 100)}%`;
+    } else if (gesture.openness < 0.3) {
+      label = '检测到：握拳 · 聚拢成蛋糕';
+    } else {
+      label = `检测到：半握 · 过渡 ${Math.round(state.spreadTarget * 100)}%`;
+    }
+    gesture.label = label;
+    setStatus(label, true);
+  }
+
+  barOpen.style.width = (gesture.openness * 100) + '%';
+  barPinch.style.width = (gesture.pinch * 100) + '%';
+}
+
+function updateRitualGestures(dt) {
+  if (ritual.leaving) return;
+
+  // ① 捏合保持 0.8 秒 → 点燃
+  if (ritual.stage === 'unlit') {
+    ritual.holdPinch = gesture.pinch > 0.7 ? ritual.holdPinch + dt : 0;
+    if (ritual.holdPinch >= 0.8) {
+      ritual.holdPinch = 0;
+      igniteCandle('捏合手势');
+    }
+  }
+
+  // ② 比耶保持 0.7 秒 → 展开照片星环
+  if (ritual.stage === 'lit') {
+    ritual.holdPeace = gesture.peace ? ritual.holdPeace + dt : 0;
+    if (ritual.holdPeace >= PEACE_HOLD) {
+      ritual.holdPeace = 0;
+      posePhotos('比耶手势');
+    }
+  }
+
+  // ③ 点赞保持 0.7 秒 → 回到蛋糕形状
+  if (ritual.stage === 'posed') {
+    ritual.holdThumb = gesture.thumbsUp ? ritual.holdThumb + dt : 0;
+    if (ritual.holdThumb >= THUMB_HOLD) {
+      ritual.holdThumb = 0;
+      gatherBack('点赞手势');
+    }
+  }
+}
+
+function drawOverlay(results) {
+  const w = overlayCanvas.width;
+  const h = overlayCanvas.height;
+  overlayCtx.clearRect(0, 0, w, h);
+
+  const list = results.multiHandLandmarks;
+  if (!list) return;
+
+  for (const lm of list) {
+    const pts = lm.map(p => ({ x: p.x * w, y: p.y * h }));
+
+    overlayCtx.strokeStyle = 'rgba(255,205,140,0.85)';
+    overlayCtx.lineWidth = 2;
+    overlayCtx.beginPath();
+    for (const [a, b] of HAND_CONNECTIONS) {
+      overlayCtx.moveTo(pts[a].x, pts[a].y);
+      overlayCtx.lineTo(pts[b].x, pts[b].y);
+    }
+    overlayCtx.stroke();
+
+    overlayCtx.fillStyle = '#ffe9c2';
+    for (const p of pts) {
+      overlayCtx.beginPath();
+      overlayCtx.arc(p.x, p.y, 2.4, 0, Math.PI * 2);
+      overlayCtx.fill();
+    }
+  }
+}
+
+/* ============================================================================
+   11. 麦克风吹气检测（带底噪校准）
+   ========================================================================== */
+/* 麦克风状态。旧版要求「低频占比 > 42%」，但绝大多数笔记本/手机麦克风带高通滤波，
+   吹气的能量很宽、低频占比常常到不了 42% → 永远返回 0（本次"吹了没反应"的主因）。
+   新版判据：自适应底噪门限 + 频谱平坦度（吹气是宽带噪声，频谱平；说话有谐波/共振峰，频谱尖）
+   + 可调灵敏度 + 实时电平条（能立刻看到麦克风到底有没有收到声音）。 */
+const MIC = {
+  sens: 0.7,        // 灵敏度 0..1（面板滑块）
+  baseline: 0.012,  // 环境底噪，自适应
+  rms: 0,
+  level: 0,         // 显示用电平 0..1
+  flatness: 0,
+  lowRatio: 0,
+  cv: 0,            // 包络起伏（变异系数）
+  hist: [],         // 最近若干帧 rms
+  silent: 0         // 连续"数字静音"帧数，用于诊断
+};
+
+let micStream = null;
+let audioCtx = null;
+let analyser = null;
+let micOn = false;
+let micTimeData = null;
+let micFreqData = null;
+let micLastResume = 0;
+
+async function enableMic() {
+  if (micOn) return true;
+  try {
+    if (!navigator.mediaDevices?.getUserMedia) throw new Error('浏览器不支持麦克风');
+
+    // 先尝试关掉浏览器自带的降噪/AGC（它们会吃掉吹气的能量），失败再退回默认
+    try {
+      micStream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+      });
+    } catch (_) {
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    }
+
+    const AC = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AC();
+    const src = audioCtx.createMediaStreamSource(micStream);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 1024;
+    analyser.smoothingTimeConstant = 0.4;
+    src.connect(analyser);
+    micTimeData = new Float32Array(analyser.fftSize);
+    micFreqData = new Uint8Array(analyser.frequencyBinCount);
+
+    micOn = true;
+    MIC.baseline = 0.012;
+    MIC.silent = 0;
+    MIC.rms = 0;
+    MIC.level = 0;
+    MIC.hist.length = 0;
+
+    // 浏览器自动播放策略下 AudioContext 可能是 suspended，此时拿到的数据全是 0
+    if (audioCtx.state !== 'running') {
+      try { await audioCtx.resume(); } catch (_) {}
+    }
+    setStatus(audioCtx.state === 'running'
+      ? '麦克风已开启 · 对着蛋糕吹气'
+      : '麦克风已就绪 · 音频被浏览器挂起，点一下页面任意处启用', true);
+    return true;
+  } catch (err) {
+    micOn = false;
+    setStatus('麦克风不可用：' + (err?.message || err) + ' · 请用按钮吹灭');
+    return false;
+  } finally {
+    if (ritual.stage === 'gathered') syncRitualUI();
+  }
+}
+
+function stopMic() {
+  if (micStream) micStream.getTracks().forEach(t => t.stop());
+  micStream = null;
+  if (audioCtx) audioCtx.close().catch(() => {});
+  audioCtx = null;
+  analyser = null;
+  micOn = false;
+  ritual.blowScore = 0;
+  ritual.air = 0;
+  MIC.level = 0;
+  MIC.rms = 0;
+  MIC.hist.length = 0;
+}
+
+/** 纯函数：根据一帧数据判定吹气强度（独立出来便于离线验证）
+ *  rms   : 时域能量
+ *  freq  : 频谱字节数据（可传空数组跳过频谱项）
+ *  cv    : 最近若干帧 rms 的变异系数——吹气稳定（小），说话有音节起伏（大）
+ */
+function classifyBlow(rms, freq, sens, baseline, cv) {
+  // 频谱只看 0–4.5kHz：更高频段吹气几乎没有能量，会把"平坦度"算崩
+  const N = Math.min(96, freq.length);
+  let low = 0, total = 0, logSum = 0, linSum = 0;
+  for (let i = 1; i < N; i++) {
+    const p = freq[i] / 255;
+    total += p;
+    if (i < 16) low += p;                 // ≈0–690Hz
+    logSum += Math.log(p + 0.002);
+    linSum += p;
+  }
+  const cnt = Math.max(1, N - 1);
+  const lowRatio = total > 0 ? low / total : 0;
+  const flatness = N > 1 ? Math.exp(logSum / cnt) / (linSum / cnt + 1e-6) : 0;
+
+  // 灵敏度映射：越高 → 门限越低、强度曲线越陡
+  const s = sens;
+  const gateMul = 2.6 - s * 1.2;       // 0.7 → 1.76
+  const span = 0.10 - s * 0.05;        // 0.7 → 0.065
+  const gate = Math.max(0.008, baseline * gateMul);
+  const level = clamp01(Math.sqrt(rms / 0.16));
+
+  if (rms < gate) return { blow: 0, level, flatness, lowRatio, gate, cv, steady: 0 };
+
+  const strength = clamp01((rms - gate) / span);
+
+  // 稳态度：吹气是持续的噪声气流，能量平稳；说话/大喊的包络起伏明显
+  const steady = clamp01((0.62 - cv) / 0.34);   // cv 0.28 → 1.0 ；cv 0.62 → 0
+
+  // 频谱平坦度只作为加分项：不同麦克风频响差异极大，不能当硬判据
+  const noiseLike = clamp01((flatness - 0.30) / 0.35);
+
+  return {
+    blow: clamp01(strength * steady * (0.55 + 0.45 * noiseLike)),
+    level, flatness, lowRatio, gate, cv, steady
+  };
+}
+
+/** 读取一帧麦克风数据，返回吹气强度 0..1 */
+function detectBlow() {
+  if (!micOn || !analyser) return 0;
+
+  // 被挂起的音频上下文不会产生数据，定期尝试恢复
+  if (audioCtx && audioCtx.state !== 'running') {
+    const now = performance.now();
+    if (now - micLastResume > 1200) {
+      micLastResume = now;
+      audioCtx.resume().catch(() => {});
+    }
+    return 0;
+  }
+
+  analyser.getFloatTimeDomainData(micTimeData);
+  let sum = 0;
+  for (let i = 0; i < micTimeData.length; i++) sum += micTimeData[i] * micTimeData[i];
+  const rms = Math.sqrt(sum / micTimeData.length);
+  MIC.rms = rms;
+  MIC.silent = rms < 1e-5 ? MIC.silent + 1 : 0;
+
+  // 包络起伏：最近 16 帧（≈0.27 秒）的变异系数
+  MIC.hist.push(rms);
+  if (MIC.hist.length > 16) MIC.hist.shift();
+  let cv = 0.2;
+  if (MIC.hist.length >= 6) {
+    const m = MIC.hist.reduce((a, b) => a + b, 0) / MIC.hist.length;
+    if (m > 1e-4) {
+      const v = MIC.hist.reduce((a, b) => a + (b - m) * (b - m), 0) / MIC.hist.length;
+      cv = Math.sqrt(v) / m;
+    } else {
+      cv = 1;
+    }
+  }
+
+  analyser.getByteFrequencyData(micFreqData);
+  const res = classifyBlow(rms, micFreqData, MIC.sens, MIC.baseline, cv);
+
+  MIC.lowRatio = res.lowRatio;
+  MIC.flatness = res.flatness;
+  MIC.level = res.level;
+  MIC.cv = cv;
+
+  // 底噪校准：安静时（含稳态环境噪声）慢速跟随，避免把吹气本身当成底噪
+  if (rms < res.gate * 1.3) {
+    MIC.baseline = clamp(MIC.baseline * 0.97 + rms * 0.03, 0.002, 0.06);
+  }
+
+  return res.blow;
+}
+
+/* ============================================================================
+   12. 照片灯箱
+   ========================================================================== */
+let viewerIndex = -1;
+
+function openViewer(index) {
+  viewerIndex = (index + MEMORY_PHOTOS.length) % MEMORY_PHOTOS.length;
+  const item = MEMORY_PHOTOS[viewerIndex];
+  viewerCapText.textContent = item.caption || '';
+  viewerCapIdx.textContent = `${viewerIndex + 1} / ${MEMORY_PHOTOS.length}`;
+
+  const url = (item.url || '').trim();
+  viewerImg.classList.remove('loaded');
+  viewerSkel.classList.remove('hide');
+  viewerFallback.style.display = 'none';
+
+  if (url) {
+    viewerImg.style.display = 'block';
+    // 重新触发加载动画
+    viewerImg.src = url;
+    if (viewerImg.complete && viewerImg.naturalWidth) {
+      viewerImg.classList.add('loaded');
+      viewerSkel.classList.add('hide');
+    }
+  } else {
+    viewerImg.style.display = 'none';
+    viewerSkel.classList.add('hide');
+    viewerFallback.style.display = 'grid';
+  }
+  viewerEl.classList.add('show');
+}
+
+viewerImg.addEventListener('load', () => {
+  viewerImg.classList.add('loaded');
+  viewerSkel.classList.add('hide');
+});
+viewerImg.addEventListener('error', () => {
+  viewerImg.style.display = 'none';
+  viewerSkel.classList.add('hide');
+  viewerFallback.style.display = 'grid';
+});
+
+function closeViewer() {
+  viewerEl.classList.remove('show');
+  viewerIndex = -1;
+}
+
+function stepViewer(delta) {
+  if (viewerIndex < 0) return;
+  openViewer(viewerIndex + delta);
+}
+
+viewerEl.addEventListener('click', e => {
+  const btn = e.target.closest('[data-v]');
+  if (!btn) return;
+  switch (btn.dataset.v) {
+    case 'close': closeViewer(); break;
+    case 'prev': stepViewer(-1); break;
+    case 'next': stepViewer(1); break;
+    case 'gather': closeViewer(); gatherBack('灯箱按钮'); break;
+  }
+});
+viewerEl.addEventListener('click', e => {
+  if (e.target === viewerEl) closeViewer();
+});
+
+document.addEventListener('keydown', e => {
+  if (viewerIndex < 0) return;
+  if (e.key === 'Escape') closeViewer();
+  else if (e.key === 'ArrowLeft') stepViewer(-1);
+  else if (e.key === 'ArrowRight') stepViewer(1);
+});
+
+/* ============================================================================
+   13. 仪式状态机（点燃 → 比耶 → 点赞 → 吹灭）
+   ========================================================================== */
+const STEPS = ['点燃', '比耶', '点赞', '吹灭'];
+
+function stageIndex(s) {
+  if (s === 'unlit') return 0;
+  if (s === 'lit') return 1;
+  if (s === 'posed') return 2;
+  if (s === 'gathered') return 3;
+  return 4;
+}
+
+/** ① 点燃蜡烛 */
+function igniteCandle(source) {
+  if (ritual.stage !== 'unlit' || ritual.leaving) return;
+  ritual.stage = 'lit';
+  ritual.t = 0;
+  ritual.igniteTarget = 1;
+  ritual.smoke = 0;
+  ritual.holdPinch = 0;
+  ritual.holdPeace = 0;
+  setStatus(`蜡烛已点燃（${source}）· 接下来比个耶 ✌🏻`, true);
+  syncRitualUI();
+}
+
+/** ② 比耶：粒子拉到最大 + 照片星环 */
+function posePhotos(source) {
+  if (ritual.stage !== 'lit' || ritual.leaving) return;
+  ritual.stage = 'posed';
+  ritual.t = 0;
+  ritual.holdPeace = 0;
+  ritual.holdThumb = 0;
+  ritual.photoOut = 0;
+
+  state.spreadTarget = 1;
+  ritual.wishTarget = 1;
+  ritual.wishT = 0;
+
+  const halfNeeded = 5.2;
+  const tanHalf = Math.tan((camera.fov * Math.PI) / 360);
+  const neededDist = halfNeeded / (tanHalf * Math.max(0.35, camera.aspect));
+  state.distTarget = clamp(Math.max(7.4, neededDist / distScale), 7.4, 24);
+
+  photosActive = true;
+  photoGroup.visible = true;
+  photos.forEach((c, i) => { c.appearAt = i * 0.12; });
+
+  setStatus(`比耶成功 ✌🏻 回忆星环展开 · 比个赞 👍🏻 回到蛋糕`, true);
+  syncRitualUI();
+}
+
+/** ③ 点赞：照片收起、粒子聚拢回蛋糕 */
+function gatherBack(source) {
+  if (ritual.stage !== 'posed' || ritual.leaving) return;
+  ritual.stage = 'gathered';
+  ritual.t = 0;
+  ritual.holdThumb = 0;
+
+  state.spreadTarget = 0;
+  ritual.wishTarget = 0;
+  state.distTarget = 6.4;
+
+  hoveredCard = null;
+  photoTipEl.classList.remove('show');
+  canvas.style.cursor = 'grab';
+  closeViewer();
+
+  setStatus(`点赞成功 👍🏻 蛋糕回来了（${source}）· 吹灭蜡烛吧`, true);
+  syncRitualUI();
+
+  // 回到蛋糕后自动尝试开启麦克风（被拒绝也不影响按钮兜底）
+  enableMic();
+}
+
+/** ④ 吹灭蜡烛 → 庆祝转场 */
+function blowOut(source) {
+  if (ritual.stage !== 'gathered' || ritual.leaving) return;
+  ritual.stage = 'blown';
+  ritual.leaving = true;
+  ritual.t = 0;
+  ritual.igniteTarget = 0;
+  ritual.smoke = 1;
+  ritual.smokeT = 0;
+  ritual.burstTarget = 1;
+  ritual.wishTarget = 0.25;
+  ritual.air = 0;
+  stopMic();
+
+  document.body.classList.add('celebrating');
+  setStatus(`蜡烛已吹灭（${source}）· 愿望已寄出`, true);
+  syncRitualUI();
+  startGiftTransition();
+}
+
+const giftTimers = [];
+
+function startGiftTransition() {
+  requestAnimationFrame(() => { giftCardEl.classList.add('show'); });
+  requestAnimationFrame(() => {
+    giftBarEl.style.transition = `width ${TRANSITION.hold}ms linear`;
+    giftBarEl.style.width = '100%';
+  });
+
+  giftTimers.push(setTimeout(() => {
+    giftMaskEl.classList.add('show');
+    giftTimers.push(setTimeout(goToCard, TRANSITION.fade + TRANSITION.navDelay));
+  }, TRANSITION.hold));
+}
+
+function goToCard() {
+  giftTimers.forEach(clearTimeout);
+  giftTimers.length = 0;
+  window.location.href = CARD_URL;
+}
+
+$('gift-open').addEventListener('click', () => {
+  giftMaskEl.classList.add('show');
+  setTimeout(goToCard, 260);
+});
+
+/* ---------- 13.1 步骤条 + 动作面板 ---------- */
+function syncRitualUI() {
+  const idx = stageIndex(ritual.stage);
+  stepperEl.innerHTML = STEPS.map((name, i) => {
+    const cls = i < idx ? 'step done' : (i === idx ? 'step active' : 'step');
+    return `${i ? '<span class="step-div"></span>' : ''}` +
+      `<span class="${cls}"><i>${i + 1}</i>${name}</span>`;
+  }).join('');
+
+  let html = '';
+  switch (ritual.stage) {
+    case 'unlit':
+      html = `<span class="ritual-label">① 点燃蜡烛</span>
+        <button class="btn primary" data-act="ignite">点燃蜡烛</button>
+        <span class="ritual-tip">点蜡烛火焰 / 捏合手势保持 0.8 秒</span>`;
+      break;
+    case 'lit':
+      html = `<span class="ritual-label">② 比耶 ✌🏻 展开回忆星环</span>
+        <button class="btn primary" data-act="peace">比耶 / 展开照片</button>
+        <span class="ritual-tip">食指+中指伸直，其余收拢，保持 0.7 秒</span>`;
+      break;
+    case 'posed':
+      html = `<span class="ritual-label">③ 比个赞 👍🏻 回到蛋糕前准备吹蜡烛</span>
+        <button class="btn primary" data-act="gather">回到蛋糕形状</button>
+        <span class="ritual-tip">拇指向上、四指收拢，保持 0.7 秒</span>`;
+      break;
+    case 'gathered':
+      html = `<span class="ritual-label">④ 吹灭蜡烛</span>
+        <button class="btn primary" data-act="blow">吹灭蜡烛</button>
+        ${micOn
+          ? `<span class="mic-meter" title="麦克风实时电平"><i id="mic-fill"></i></span>
+             <label class="mic-sens-wrap" title="麦克风灵敏度：吹不动可以往右拉">灵敏度
+               <input id="mic-sens" type="range" min="0" max="100" value="${Math.round(MIC.sens * 100)}">
+             </label>`
+          : `<button class="btn" data-act="mic">开启麦克风吹气</button>`}
+        <span class="ritual-tip">${micOn ? '对着麦克风吹气约 0.6 秒' : '或点上方按钮吹灭'}</span>`;
+      break;
+    case 'blown':
+      html = `<span class="ritual-label">④ 蜡烛已熄灭 · 愿望已寄出</span>
+        <span class="ritual-tip">正在为你开启专属信件…</span>`;
+      break;
+  }
+  ritualEl.innerHTML = html;
+  layoutRitual();
+}
+
+function layoutRitual() {
+  const controlsTop = document.querySelector('.controls').getBoundingClientRect().top;
+  const ritualBottom = window.innerHeight - controlsTop + 10;
+  ritualEl.style.bottom = Math.max(10, ritualBottom) + 'px';
+  hintEl.style.bottom = (ritualBottom + ritualEl.offsetHeight + 10) + 'px';
+}
+window.addEventListener('resize', layoutRitual);
+
+ritualEl.addEventListener('click', e => {
+  const btn = e.target.closest('[data-act]');
+  if (!btn) return;
+  switch (btn.dataset.act) {
+    case 'ignite': igniteCandle('按钮'); break;
+    case 'peace':  posePhotos('按钮'); break;
+    case 'gather': gatherBack('按钮'); break;
+    case 'blow':   blowOut('按钮'); break;
+    case 'mic':    enableMic(); break;
+  }
+});
+
+ritualEl.addEventListener('input', e => {
+  if (e.target.id === 'mic-sens') MIC.sens = clamp01(e.target.value / 100);
+});
+
+/* ============================================================================
+   14. 尺寸自适应
+   ========================================================================== */
+function onResize() {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const pr = Math.min(window.devicePixelRatio || 1, 2);
+
+  renderer.setPixelRatio(pr);
+  renderer.setSize(w, h, false);
+
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+
+  const aspect = w / h;
+  distScale = aspect >= 1 ? 1 : Math.min(1.9, 0.8 / aspect);
+
+  const s = clamp(Math.min(w, h) / 860, 0.62, 1.2);
+  cakeMat.uniforms.uPixelRatio.value = pr;
+  cakeMat.uniforms.uSize.value = s;
+  dustMat.uniforms.uPixelRatio.value = pr;
+  dustMat.uniforms.uSize.value = s;
+}
+window.addEventListener('resize', onResize);
+window.addEventListener('orientationchange', () => setTimeout(onResize, 120));
+onResize();
+
+/* ============================================================================
+   15. 主循环
+   ========================================================================== */
+const clock = new THREE.Clock();
+let fpsAcc = 0;
+let fpsFrames = 0;
+let orbitTime = 0;
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const t = clock.elapsedTime;
+
+  /* ---- 状态插值 ---- */
+  state.spread = damp(state.spread, state.spreadTarget, 2.2, dt);
+  state.viewYaw = damp(state.viewYaw, state.viewYawTarget, 6.0, dt);
+  state.viewPitch = damp(state.viewPitch, state.viewPitchTarget, 5.0, dt);
+  state.dist = damp(state.dist, state.distTarget, 4.0, dt);
+  state.flame = damp(state.flame, state.flameTarget, 6.0, dt);
+  state.handSpin = damp(state.handSpin, state.handSpinTarget, 3.2, dt);
+
+  /* ---- 仪式推进 ---- */
+  ritual.t += dt;
+
+  ritual.ignite = damp(ritual.ignite, ritual.igniteTarget, ritual.igniteTarget > ritual.ignite ? 5.0 : 3.0, dt);
+  if (ritual.igniteTarget === 0 && ritual.ignite > 0.02) {
+    ritual.ignite *= 0.86 + Math.random() * 0.26;
+  }
+
+  ritual.burst = damp(ritual.burst, ritual.burstTarget, 1.7, dt);
+
+  if (ritual.leaving) {
+    ritual.burstT += dt;
+    const f = clamp01(ritual.burstT / 1.4);
+    burstGlow.visible = f < 1;
+    burstGlow.scale.setScalar(2.5 + f * 12.5);
+    burstGlow.material.opacity = (1 - f) * 0.85;
+  }
+
+  if (ritual.stage === 'blown') {
+    ritual.smokeT += dt;
+    ritual.smoke = Math.max(0, ritual.smoke - dt * 0.14);
+  }
+
+  if (ritual.stage === 'posed') {
+    state.spreadTarget = 1;
+    ritual.wishT += dt;
+  }
+  ritual.wish = damp(ritual.wish, ritual.wishTarget, 1.2, dt);
+
+  /* ---- 麦克风吹气 ---- */
+  if (micOn && ritual.stage === 'gathered') {
+    const b = detectBlow();
+    ritual.air = damp(ritual.air, b, 10, dt);
+
+    if (b > 0.22) {
+      ritual.blowScore = clamp01(ritual.blowScore + dt * (0.7 + b * 1.3));
+      setStatus(`吹气中 ${Math.round(ritual.blowScore * 100)}% · 继续`, true);
+    } else {
+      ritual.blowScore = clamp01(ritual.blowScore - dt * 1.2);
+      // 分情况给出可操作的提示，而不是干等
+      if (MIC.silent > 150) {
+        setStatus('麦克风没有收到声音 · 请检查系统输入设备，或点「开启麦克风吹气」重试');
+      } else if (audioCtx && audioCtx.state !== 'running') {
+        setStatus('音频被浏览器挂起 · 点一下页面任意处即可启用');
+      } else {
+        setStatus('对着麦克风吹气（右侧电平条会跳动）', true);
+      }
+    }
+
+    // 电平条显示实时输入电平——先让用户确认"麦克风确实在收音"
+    const fill = document.getElementById('mic-fill');
+    if (fill) {
+      fill.style.width = (MIC.level * 100) + '%';
+      fill.classList.toggle('hot', MIC.level > 0.4);
+    }
+
+    if (ritual.blowScore >= 1) blowOut('麦克风吹气');
+  } else {
+    ritual.air = damp(ritual.air, 0, 8, dt);
+  }
+
+  /* ---- 照片星环 ---- */
+  if (photosActive) {
+    if (ritual.stage === 'gathered' || ritual.leaving) {
+      ritual.photoOut = Math.min(1, ritual.photoOut + dt * 0.9);
+    }
+    const fade = 1 - ritual.photoOut;
+    if (fade <= 0.01) {
+      photosActive = false;
+      photoGroup.visible = false;
+    }
+
+    const slow = hoveredCard ? 0.32 : 1;
+    orbitTime += dt * slow;
+
+    for (const c of photos) {
+      const localT = clamp01((ritual.t - (c.appearAt || 0)) / 0.9);
+      c.appear = damp(c.appear, localT, 6, dt);
+
+      const a = c.angle0 + orbitTime * c.speed;
+      const r = c.radius + ritual.photoOut * 2.4;      // 收起时向外飘散
+      c.mesh.position.set(
+        Math.cos(a) * r,
+        c.y0 + Math.sin(t * 0.9 + c.index * 1.7) * 0.22 + ritual.photoOut * 0.8,
+        Math.sin(a) * r
+      );
+      // 朝向相机（Billboard），再叠一点点"呼吸"微倾，避免死板
+      c.mesh.lookAt(camera.position);
+      c.mesh.rotateZ(Math.sin(t * 0.6 + c.index * 1.3) * 0.035);
+
+      const hoverT = c === hoveredCard ? 1 : 0;
+      c.hover = damp(c.hover, hoverT, 8, dt);
+
+      const pop = c.appear * (1 + c.hover * 0.14) * (1 - ritual.photoOut * 0.35);
+      c.mesh.scale.setScalar(Math.max(0.001, pop));
+
+      c.mat.opacity = clamp01(c.appear) * (0.9 + c.hover * 0.1) * fade;
+      c.haloMat.opacity = clamp01(c.appear) * (0.20 + c.hover * 0.30) * fade;
+      c.glowMat.opacity = clamp01(c.appear) * (0.10 + c.hover * 0.80) * fade;
+    }
+
+    if (!ritual.leaving && fade > 0.5) {
+      raycaster.setFromCamera(pointerNDC, camera);
+      const hits = raycaster.intersectObjects(photoGroup.children, false);
+      const prev = hoveredCard;
+      hoveredCard = hits.length ? hits[0].object.userData.card : null;
+
+      if (hoveredCard !== prev) {
+        if (hoveredCard && hoveredCard.item.caption) {
+          photoTipEl.textContent = hoveredCard.item.caption;
+          photoTipEl.classList.add('show');
+        } else {
+          photoTipEl.classList.remove('show');
+        }
+      }
+      if (!dragging) canvas.style.cursor = hoveredCard ? 'pointer' : 'grab';
+    } else {
+      hoveredCard = null;
+      photoTipEl.classList.remove('show');
+    }
+  }
+
+  // caption 胶囊跟随指针
+  if (hoveredCard) {
+    photoTipEl.style.left = pointerX + 'px';
+    photoTipEl.style.top = pointerY - 14 + 'px';
+  }
+
+  /* ---- 蛋糕自转 ---- */
+  if (!gesture.active && !dragging) state.autoSpin += dt * 0.15;
+  cakeGroup.rotation.y = damp(cakeGroup.rotation.y, state.handSpin + state.autoSpin, 2.6, dt);
+  cakeGroup.position.y = Math.sin(t * 0.9) * 0.018;
+
+  /* ---- uniforms ---- */
+  cakeMat.uniforms.uTime.value = t;
+  cakeMat.uniforms.uSpread.value = state.spread;
+  cakeMat.uniforms.uFlame.value = state.flame;
+  cakeMat.uniforms.uIgnite.value = ritual.ignite;
+  cakeMat.uniforms.uBurst.value = ritual.burst;
+  cakeMat.uniforms.uSmoke.value = ritual.smoke;
+  cakeMat.uniforms.uSmokeT.value = ritual.smokeT;
+  cakeMat.uniforms.uAir.value = ritual.air;
+
+  dustMat.uniforms.uTime.value = t;
+  dustMat.uniforms.uSpread.value = state.spread;
+  dustMat.uniforms.uWish.value = ritual.wish;
+  dustMat.uniforms.uWishT.value = ritual.wishT;
+  dustMat.uniforms.uBurst.value = ritual.burst;
+  dustPoints.rotation.y = t * 0.012;
+
+  /* ---- 光晕 ---- */
+  const ignite = ritual.ignite;
+  const breath = 1 + Math.sin(t * 6.0) * 0.06 + state.flame * 0.04;
+  flameGlow.scale.setScalar(1.5 * breath * (0.55 + 0.45 * ignite) * (1 - ritual.air * 0.35));
+  flameGlow.material.opacity = clamp((0.55 + 0.35 * state.flame + Math.sin(t * 11) * 0.04) * ignite * (1 - ritual.air * 0.4), 0, 1);
+  flameGlow.visible = ignite > 0.02;
+
+  groundGlow.material.opacity = 0.36 + state.flame * 0.08 + Math.sin(t * 2.2) * 0.03;
+  groundGlow.material.opacity *= (0.45 + 0.55 * ignite) * (1 + ritual.burst * 1.6);
+  groundGlow.scale.setScalar(1 + ritual.burst * 0.55);
+
+  /* ---- 相机 ---- */
+  const dist = state.dist * distScale;
+  const cosP = Math.cos(state.viewPitch);
+  camera.position.set(
+    Math.sin(state.viewYaw) * cosP * dist,
+    Math.sin(state.viewPitch) * dist + CAKE_CENTER_Y,
+    Math.cos(state.viewYaw) * cosP * dist
+  );
+  camera.lookAt(0, CAKE_CENTER_Y, 0);
+
+  /* ---- 进度条兜底 ---- */
+  if (!cameraOn) {
+    barOpen.style.width = (state.spread * 100) + '%';
+    barPinch.style.width = '0%';
+  }
+
+  /* ---- FPS ---- */
+  fpsAcc += dt;
+  fpsFrames++;
+  if (fpsAcc >= 0.5) {
+    fpsEl.textContent = Math.round(fpsFrames / fpsAcc) + ' FPS · ' +
+      (cakePoints.geometry.attributes.position.count + DUST_N) + ' 粒子';
+    fpsAcc = 0;
+    fpsFrames = 0;
+  }
+
+  renderer.render(scene, camera);
+}
+
+/* ============================================================================
+   16. 启动
+   ========================================================================== */
+setCamUI(false);
+syncRitualUI();
+animate();
+
+cakeMat.uniforms.uIgnite.value = 0;
+cakeMat.uniforms.uBurst.value = 0;
+cakeMat.uniforms.uSmoke.value = 0;
+cakeMat.uniforms.uAir.value = 0;
+flameGlow.visible = false;
+
+// 任何一次点击都尝试恢复 AudioContext（浏览器自动播放策略）
+window.addEventListener('pointerdown', () => {
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+}, { passive: true });
+
+window.__cakeDebug = {
+  ritual, state, gesture, renderer, camera, analyzeHand,
+  CARD_URL, MEMORY_PHOTOS, photoGroup, photos,
+  igniteCandle, posePhotos, gatherBack, blowOut, openViewer,
+  enableMic, detectBlow, classifyBlow, MIC,
+  micOn: () => micOn,
+  micState: () => micOn ? { state: audioCtx?.state, rms: +MIC.rms.toFixed(4), flat: +MIC.flatness.toFixed(3), low: +MIC.lowRatio.toFixed(3), level: +MIC.level.toFixed(3) } : null
+};
+
+window.__cakeReady = true;
+requestAnimationFrame(() => {
+  bootEl.classList.add('hide');
+  setTimeout(() => { bootEl.style.display = 'none'; }, 800);
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    if (cameraOn) stopCamera();
+    if (micOn) stopMic();
+  }
+});
+</script>
+</body>
+</html>
