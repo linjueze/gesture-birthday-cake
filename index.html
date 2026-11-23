@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
@@ -873,28 +873,32 @@ function buildBouquetTargets(count) {
   let w = 0;
 
   /* ---------------- 配色 ---------------- */
-  const C_DEEP = HEX(0xff4d7d);     // 花心：深绯红
-  const C_ROSE = HEX(0xff8fb1);     // 中层：柔和玫瑰粉
-  const C_CHAMP = HEX(0xffe6c7);    // 花瓣边缘：香槟金 / 奶白
+  const C_DEEP = HEX(0xff3b6f);     // 花心：深绯红
+  const C_ROSE = HEX(0xff8fb1);     // 中层：玫瑰粉
+  const C_EDGE = HEX(0xfff0d9);     // 花瓣边缘：亮奶白 / 香槟金
+  const C_CHAMP = HEX(0xffe6c7);
   const C_STAR = HEX(0xfff7e8);     // 满天星
-  const C_LEAF_A = HEX(0x52b788);   // 尖叶（柔和翡翠绿）
+  const C_LEAF_A = HEX(0x52b788);   // 衬叶
   const C_LEAF_B = HEX(0x74c69d);
-  const C_PAPER_A = HEX(0xf3cfa4);  // 包装纸（暖香槟金）
-  const C_PAPER_B = HEX(0xd9a46f);  // 包装纸（米白 → 深一档）
+  const C_PAPER_A = HEX(0xf3cfa4);  // 包装纸
+  const C_PAPER_B = HEX(0xd9a46f);
   const C_RIB_A = HEX(0xffcf70);    // 丝带亮金
-  const C_RIB_B = HEX(0xffb45a);    // 丝带暖金
-  const C_STEM = HEX(0x4a8d6b);     // 花茎
+  const C_RIB_B = HEX(0xffb45a);
+  const C_STEM = HEX(0x4a8d6b);
 
-  /* ---------------- 布局参数（调花束大小改这里） ---------------- */
-  const DOME_Y = 1.70;        // 花球中心高度
-  const PAPER_TOP_Y = 0.80;   // 包装纸上缘（半托花球）
-  const PAPER_TOP_R = 1.04;
-  const PAPER_BOT_Y = -0.46;
-  const PAPER_BOT_R = 0.13;
-  const BOW_Y = -0.30;        // 丝带 / 蝴蝶结（收腰处，约底部 1/3）
-  const BRIGHT = 0.74;        // 整体亮度（<1 防止叠加混合把颜色冲白）
-  const TILT = 0.21;          // 整束向镜头前倾约 12°
-  const PIVOT_Y = 0.75;       // 倾斜支点（避免整体漂移）
+  /* ---------------- 布局参数（整体 y ∈ [0.05, 2.35]，中心 ≈ 1.20） ---------------- */
+  const STEM_TOP_Y = 0.58;          // 花茎上端（收腰内）
+  const STEM_BOT_Y = 0.05;          // 花茎下端
+  const BOW_Y = 0.56;               // 收腰丝带 / 蝴蝶结
+  const PAPER_BOT_Y = 0.52;         // 包装纸收腰
+  const PAPER_BOT_R = 0.15;
+  const PAPER_TOP_R = 0.92;         // 包装纸开口半径
+  const PAPER_TOP_MID = 1.68;       // 开口高度基准
+  const PAPER_TOP_TILT = 0.20;      // 前低（1.48）后高（1.88）的斜杯口
+  const DOME_C = { x: 0, y: 1.98, z: 0.05 };   // 主玫瑰中心
+  const BRIGHT = 0.74;
+  const TILT = 0.22;                // 整体前倾
+  const PIVOT_Y = 1.25;             // 倾斜支点
 
   const cosT = Math.cos(TILT);
   const sinT = Math.sin(TILT);
@@ -914,37 +918,53 @@ function buildBouquetTargets(count) {
   };
 
   /* ============================================================
-     1. 玫瑰穹顶（≈55%）：中心 1 朵大玫瑰 + 周围 7 朵放射状外倾
-     每朵 = 5 层杯状螺旋花瓣，内层紧卷、外层外翻
+     1. 紧簇立体玫瑰球（56%）
+        中心 1 朵 + 中圈 5 朵 + 外低圈 6 朵，外圈下半部嵌入包装纸杯口
      ============================================================ */
-  const N_ROSE = Math.floor(count * 0.55);
-  const roses = [{ x: 0, y: DOME_Y + 0.34, z: 0, R: 0.58, tilt: 0, dir: 0 }];
-  const RING = 7;
-  for (let i = 0; i < RING; i++) {
-    const a = (i / RING) * Math.PI * 2 + 0.22;
+  const N_ROSE = Math.floor(count * 0.56);
+
+  const roses = [
+    { x: DOME_C.x, y: DOME_C.y, z: DOME_C.z, R: 0.42, tilt: 0, dir: 0, wgt: 1.5 }
+  ];
+  // 中圈 5 朵
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2 + 0.30;
     roses.push({
-      x: Math.cos(a) * 0.67,
-      y: DOME_Y - 0.12 + (i % 2) * 0.09,
-      z: Math.sin(a) * 0.67,
-      R: 0.44,
-      tilt: 0.30,                 // 向外微倾
-      dir: a
+      x: Math.cos(a) * 0.46,
+      y: 1.74 + (i % 2) * 0.08,
+      z: Math.sin(a) * 0.46,
+      R: 0.36,
+      tilt: 0.22,
+      dir: a,
+      wgt: 1.0
+    });
+  }
+  // 外低圈 6 朵（贴住包装纸内缘）
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2 + 0.85;
+    roses.push({
+      x: Math.cos(a) * 0.68,
+      y: 1.48 + (i % 2) * 0.08,
+      z: Math.sin(a) * 0.68,
+      R: 0.33,
+      tilt: 0.34,
+      dir: a,
+      wgt: 0.88
     });
   }
 
-  const roseW = roses.map((_, i) => (i === 0 ? 1.4 : 1));
-  const roseWSum = roseW.reduce((a, b) => a + b, 0);
+  const roseWSum = roses.reduce((s, r) => s + r.wgt, 0);
 
   const LAYERS = 5;
-  const PETALS = [3, 5, 6, 7, 8];                 // 每层花瓣数：内层少、外层多
+  const PETALS = [3, 5, 6, 7, 8];
   const layerW = PETALS.map((p, l) => p * (0.55 + 0.45 * l));
   const layerWSum = layerW.reduce((a, b) => a + b, 0);
 
   for (let ri = 0; ri < roses.length; ri++) {
     const rs = roses[ri];
-    const n = Math.round(N_ROSE * roseW[ri] / roseWSum);
+    const n = Math.round(N_ROSE * rs.wgt / roseWSum);
 
-    // 外倾旋转轴：垂直于径向
+    // 外倾旋转轴（垂直于径向）
     const ax = -Math.sin(rs.dir);
     const az = Math.cos(rs.dir);
     const ca = Math.cos(rs.tilt);
@@ -952,7 +972,6 @@ function buildBouquetTargets(count) {
     const kk = 1 - ca;
 
     for (let i = 0; i < n; i++) {
-      // 选层：外层花瓣面积大，粒子更密
       let r = Math.random() * layerWSum;
       let l = 0;
       while (l < LAYERS - 1 && r > layerW[l]) { r -= layerW[l]; l++; }
@@ -960,20 +979,21 @@ function buildBouquetTargets(count) {
       const P = PETALS[l];
       const pIdx = Math.floor(Math.random() * P);
       const u = Math.pow(Math.random(), 0.85);     // 0 花瓣根 → 1 花瓣尖
-      const v = Math.random() * 2 - 1;             // 花瓣横向 -1..1
+      const v = Math.random() * 2 - 1;
 
-      /* —— 杯状螺旋花瓣参数方程 —— */
-      const rho0 = rs.R * (0.10 + 0.155 * l);      // 花瓣根部半径
-      const pLen = rs.R * (0.52 + 0.13 * l);       // 花瓣长度
-      const tiltL = 1.30 - l * 0.27;               // 内层近竖直 → 外层外翻
-      const halfW = 0.62 + 0.16 * l;               // 花瓣角宽
+      /* —— 杯状螺旋花瓣：内层近竖直、外层外翻，纵向加深 —— */
+      const rho0 = rs.R * (0.10 + 0.155 * l);
+      const pLen = rs.R * (0.52 + 0.13 * l);
+      const tiltL = 1.42 - 0.26 * l;               // 内层 81° → 外层 22°
+      const halfW = 0.62 + 0.16 * l;
       const phi = (pIdx / P) * Math.PI * 2 + l * 0.85 + rs.dir +
                   v * halfW * (1 - 0.30 * u);
 
       const rho = rho0 + u * pLen * Math.cos(tiltL);
-      const ly = u * pLen * Math.sin(tiltL)
-               - (1 - u) * rs.R * 0.06
-               + v * v * rs.R * (0.16 + 0.05 * l); // 两侧上翘 → 杯状
+      // 纵向：花瓣抬升 × 1.32 做杯深，两侧 v² 上翘形成杯壁
+      const ly = (u * pLen * Math.sin(tiltL)) * 1.32
+               + (1 - u) * rs.R * 0.10
+               + v * v * rs.R * (0.20 + 0.05 * l);
       const lx = Math.cos(phi) * rho;
       const lz = Math.sin(phi) * rho;
 
@@ -986,157 +1006,168 @@ function buildBouquetTargets(count) {
       const ry = ly * ca + nyp * sa;
       const rz = lz * ca + nzp * sa + az * nd * kk;
 
-      /* —— 色阶：花心深绯红 → 中层玫瑰粉 → 花瓣边缘香槟金 —— */
+      /* —— 色阶：深绯红花心 → 玫瑰粉 → 亮奶白花瓣边缘 —— */
       const tt = l / (LAYERS - 1);
-      const base = mixC(C_DEEP, C_ROSE, Math.min(1, tt * 1.55));
-      const edge = Math.pow(u, 1.6) * (0.22 + 0.78 * tt);
-      const c = mixC(base, C_CHAMP, edge * 0.85);
+      const base = mixC(C_DEEP, C_ROSE, Math.min(1, tt * 1.45));
+      const edge = Math.pow(u, 1.4) * (0.20 + 0.80 * tt);
+      const c = mixC(base, C_EDGE, Math.min(0.95, edge * 0.9));
 
-      put(rs.x + rx, rs.y + ry, rs.z + rz, jitC(c, 0.025), 1.16);
+      put(rs.x + rx, rs.y + ry, rs.z + rz, jitC(c, 0.02), 1.15);
     }
   }
 
   /* ============================================================
-     2. 满天星 + 尖叶（≈10%）
+     2. 满天星（6%）+ 衬叶（4%）：都紧贴花球，不悬空
      ============================================================ */
-  const N_STAR = Math.floor(count * 0.062);
+  const N_STAR = Math.floor(count * 0.06);
   for (let i = 0; i < N_STAR; i++) {
     const a = Math.random() * Math.PI * 2;
-    const rr = 0.55 + Math.random() * 0.55;
+    const rr = 0.25 + Math.random() * 0.55;              // r ∈ [0.25, 0.80]
+    const y = 1.45 + Math.random() * 0.57;               // y ∈ [1.45, 2.02]
     put(
       Math.cos(a) * rr,
-      DOME_Y + rand(-0.55, 0.55) - rr * 0.12,
+      y + (rr < 0.5 ? 0.12 : 0),                          // 内圈稍高，贴合穹顶
       Math.sin(a) * rr,
-      mulC(C_STAR, rand(0.82, 1.0)),
-      rand(0.85, 1.2)
+      mulC(C_STAR, rand(0.88, 1.0)),
+      rand(0.9, 1.2)
     );
   }
 
-  const N_LEAF = Math.floor(count * 0.038);
+  const N_LEAF = Math.floor(count * 0.04);
   const LEAVES = 7;
   for (let li = 0; li < LEAVES; li++) {
-    const a = (li / LEAVES) * Math.PI * 2 + 0.55;
-    const bx = Math.cos(a) * 0.56;
-    const bz = Math.sin(a) * 0.56;
-    const by = DOME_Y - 0.58 + (li % 2) * 0.09;
-    const len = 0.58, wid = 0.17, up = 0.46;
+    const a = (li / LEAVES) * Math.PI * 2 + 0.45;
     const dx = Math.cos(a);
     const dz = Math.sin(a);
+    // 叶根贴在外圈玫瑰与包装纸上沿的缝隙处
+    const bx = dx * 0.62;
+    const bz = dz * 0.62;
+    const by = 1.38 + (li % 2) * 0.14;                   // y ∈ [1.38, 1.52]
+    const len = 0.36;
+    const wid = 0.115;
+    const rise = 0.30;                                   // 斜向上探出
     const per = Math.floor(N_LEAF / LEAVES);
     for (let i = 0; i < per; i++) {
       const u = Math.random();
-      // 尖叶轮廓：中段最宽、叶尖收拢
       const halfW = Math.pow(Math.sin(Math.PI * Math.pow(u, 0.82)), 0.85) * wid;
       const v = rand(-halfW, halfW);
       put(
         bx + dx * u * len - dz * v,
-        by + u * up * len + Math.abs(v) * 0.32,
+        by + u * rise + Math.abs(v) * 0.20,
         bz + dz * u * len + dx * v,
         mixC(C_LEAF_A, C_LEAF_B, Math.random()),
-        1.12
+        1.1
       );
     }
   }
 
   /* ============================================================
-     3. 多层包装纸（≈17.5%）：下窄上宽的倒锥，上缘波浪折边
+     3. 包装纸（17% + 1.4% 边缘）：前低后高的斜杯口，无缝包住花球下半部
      ============================================================ */
-  const N_PAPER = Math.floor(count * 0.175);
+  const N_PAPER = Math.floor(count * 0.17);
   for (let layer = 0; layer < 2; layer++) {
     const outer = layer === 0;
-    const yTop = PAPER_TOP_Y + (outer ? 0 : -0.12);
-    const rTop = PAPER_TOP_R * (outer ? 1 : 0.84);
+    const rTopBase = PAPER_TOP_R * (outer ? 1 : 0.86);
     const half = Math.floor(N_PAPER / 2);
     for (let i = 0; i < half; i++) {
-      const t = Math.pow(Math.random(), 0.9);      // 0 底 → 1 上缘
+      const t = Math.pow(Math.random(), 0.9);            // 0 收腰 → 1 上沿
       const a = Math.random() * Math.PI * 2;
-      let r = PAPER_BOT_R + (rTop - PAPER_BOT_R) * Math.pow(t, 1.25);
-      r *= 1 + Math.sin(a * 6 + (outer ? 0 : 0.6)) * 0.055 * t;   // 波浪褶皱
+
+      // 前低后高：sin(a) > 0 为镜头一侧
+      const yTop = PAPER_TOP_MID - PAPER_TOP_TILT * Math.sin(a)
+                 + (outer ? 0 : -0.08);                  // 内层略低
       const y = PAPER_BOT_Y + t * (yTop - PAPER_BOT_Y)
-              + Math.sin(a * 6) * 0.04 * t * t;                    // 上缘起伏
+              + Math.sin(a * 6 + (outer ? 0 : 0.5)) * 0.035 * t * t * t;
+
+      let r = PAPER_BOT_R + (rTopBase - PAPER_BOT_R) * Math.pow(t, 1.2);
+      r *= 1 + Math.sin(a * 6 + (outer ? 0 : 0.5)) * 0.05 * t;
+
       put(Math.cos(a) * r, y, Math.sin(a) * r,
-        mixC(C_PAPER_B, C_PAPER_A, t), outer ? 1.45 : 1.32);
+        mixC(C_PAPER_B, C_PAPER_A, t), outer ? 1.5 : 1.38);
     }
   }
-  // 上缘加密：勾出清晰的纸口轮廓
+  // 上沿加密：勾出优雅的暖金轮廓线
   const N_RIM = Math.floor(count * 0.014);
   for (let i = 0; i < N_RIM; i++) {
     const a = Math.random() * Math.PI * 2;
-    const r = PAPER_TOP_R * (1 + 0.055 * Math.sin(a * 6));
-    put(Math.cos(a) * r, PAPER_TOP_Y + Math.sin(a * 6) * 0.04, Math.sin(a) * r,
-      mixC(C_PAPER_A, C_CHAMP, 0.55), 1.6);
+    const yTop = PAPER_TOP_MID - PAPER_TOP_TILT * Math.sin(a);
+    const r = PAPER_TOP_R * (1 + 0.05 * Math.sin(a * 6));
+    put(Math.cos(a) * r, yTop + Math.sin(a * 6) * 0.03, Math.sin(a) * r,
+      mixC(C_PAPER_A, C_CHAMP, 0.6), 1.7);
   }
 
   /* ============================================================
-     4. 丝带环 + 双耳蝴蝶结 + 两条飘带（≈7.5%）
+     4. 收腰丝带环 + 立体蝴蝶结 + 两条飘带（7.5%）
+        BOW_Y = 0.56，双耳 |x| ∈ [0.06, 0.34]，y ∈ [0.42, 0.72]
      ============================================================ */
   const N_RIB = Math.floor(count * 0.075);
-  const bandN = Math.floor(N_RIB * 0.42);
+  const bandN = Math.floor(N_RIB * 0.30);
   for (let i = 0; i < bandN; i++) {
     const a = Math.random() * Math.PI * 2;
-    const r = 0.168 + 0.012 * Math.sin(a * 4);
-    put(Math.cos(a) * r, BOW_Y + rand(-0.038, 0.038), Math.sin(a) * r,
+    const r = 0.17 + 0.010 * Math.sin(a * 4);
+    put(Math.cos(a) * r, BOW_Y + rand(-0.035, 0.035), Math.sin(a) * r,
       mixC(C_RIB_A, C_RIB_B, Math.random()), 1.25);
   }
-  for (let i = 0; i < N_RIB - bandN; i++) {
+
+  const earN = Math.floor((N_RIB - bandN) * 0.62);       // 双耳
+  const tailN = N_RIB - bandN - earN;                    // 飘带
+  for (let i = 0; i < earN; i++) {
     const side = i % 2 === 0 ? -1 : 1;
-    if (i % 5 === 0) {
-      // 飘带：从结心自然下垂、微微外弯
-      const t = Math.random();
-      put(
-        side * (0.06 + Math.sin(t * 2.2) * 0.10 + t * 0.02),
-        BOW_Y - 0.10 - t * 0.60,
-        0.20 + t * 0.05,
-        mixC(C_RIB_B, C_RIB_A, Math.random() * 0.55),
-        1.0
-      );
-    } else {
-      // 双耳：两个椭环
-      const t = Math.random() * Math.PI * 2;
-      put(
-        side * (0.085 + Math.cos(t) * 0.165),
-        BOW_Y + Math.sin(t) * 0.118,
-        0.195 + Math.sin(t) * 0.05,
-        C_RIB_A,
-        1.2
-      );
-    }
+    const t = Math.random() * Math.PI * 2;
+    // 椭环：|x| 0.06~0.34，y 0.42~0.72
+    const lx = 0.20 + Math.cos(t) * 0.14;
+    const ly = 0.57 + Math.sin(t) * 0.15;
+    put(side * lx, ly, 0.20 + Math.sin(t) * 0.05,
+      mixC(C_RIB_A, C_RIB_B, 0.25 + Math.random() * 0.5), 1.3);
+  }
+  for (let i = 0; i < tailN; i++) {
+    const side = i % 2 === 0 ? -1 : 1;
+    const t = Math.random();
+    // 飘带：从结心（y≈0.52）自然下垂到 y = 0.12，微微外弯
+    put(
+      side * (0.055 + Math.sin(t * 2.0) * 0.085),
+      BOW_Y - 0.04 - t * 0.40,
+      0.205 + t * 0.05,
+      mixC(C_RIB_B, C_RIB_A, Math.random() * 0.55),
+      1.15
+    );
   }
 
   /* ============================================================
-     5. 花茎：收腰下方整齐聚拢的几根细茎（≈7.5%）
+     5. 花茎：收腰下方紧凑聚拢的一束（5%），y ∈ [0.05, 0.58]
      ============================================================ */
-  const N_STEM = Math.floor(count * 0.075);
+  const N_STEM = Math.floor(count * 0.05);
   const STEM_N = 6;
   for (let s = 0; s < STEM_N; s++) {
     const a = (s / STEM_N) * Math.PI * 2 + 0.3;
-    const sx = Math.cos(a) * 0.10, sz = Math.sin(a) * 0.10;
-    const ex = Math.cos(a) * 0.048, ez = Math.sin(a) * 0.048;
+    const topR = 0.11;
+    const botR = 0.06;
     const per = Math.floor(N_STEM / STEM_N);
     for (let i = 0; i < per; i++) {
-      const t = Math.random();
+      const t = Math.random();                            // 0 上 → 1 下
+      const r = topR + (botR - topR) * t;
       put(
-        sx + (ex - sx) * t + rand(-0.007, 0.007),
-        PAPER_BOT_Y - 0.02 - t * 0.60,
-        sz + (ez - sz) * t + rand(-0.007, 0.007),
+        Math.cos(a) * r + rand(-0.006, 0.006),
+        STEM_TOP_Y - t * (STEM_TOP_Y - STEM_BOT_Y),
+        Math.sin(a) * r + rand(-0.006, 0.006),
         mixC(C_STEM, HEX(0x6aa87f), Math.random() * 0.5),
-        0.8
+        0.85
       );
     }
   }
 
   /* ============================================================
-     6. 克制的漂浮星光（补齐剩余）：远一点、暗一点，不遮挡轮廓
+     6. 外围极少量漂浮星光（≤4%），远一点、暗一点，不干扰轮廓
      ============================================================ */
   let guard = 0;
   while (w < count && guard < count * 2) {
     guard++;
     const a = Math.random() * Math.PI * 2;
-    const r = rand(1.45, 2.15);
-    put(Math.cos(a) * r, rand(-0.5, 2.5), Math.sin(a) * r,
-      mulC(C_STAR, rand(0.22, 0.5)), rand(0.7, 1.05));
+    const r = rand(1.15, 1.85);
+    put(Math.cos(a) * r, rand(0.35, 2.35), Math.sin(a) * r,
+      mulC(C_STAR, rand(0.18, 0.42)), rand(0.7, 1.0));
   }
-  while (w < count) put(0, 0, 0, C_STAR, 0.6);
+  while (w < count) put(0, 1.2, 0, C_STAR, 0.6);
 
   return { pos, col, size: siz, filled: w };
 }
@@ -2434,7 +2465,7 @@ function bouquetMorph(source) {
   ritual.igniteTarget = 0;        // 烛火柔和淡出
 
   // 视角自动微调到最适合欣赏花束的角度
-  state.distTarget = 5.9;
+  state.distTarget = 5.6;         // 略微拉近，让紧凑饱满的花束成为画面中心
   state.viewPitchTarget = 0.14;
   state.autoSpeed = 0.7;
 
