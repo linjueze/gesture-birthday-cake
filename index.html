@@ -50,23 +50,26 @@
     color:rgba(255,226,190,.5);
   }
 
-  /* ---------- 步骤条 ---------- */
+  /* ---------- 步骤条（6 步，紧凑 + 可换行） ---------- */
   .stepper{
     position:absolute;top:22px;left:50%;transform:translateX(-50%);
-    display:flex;gap:7px;align-items:center;
-    padding:7px 15px;border-radius:999px;
+    display:flex;gap:5px;align-items:center;justify-content:center;flex-wrap:wrap;
+    row-gap:5px;
+    /* 两侧给品牌与手势面板留位，避免 6 步变宽后重叠 */
+    max-width:min(880px, calc(100vw - 620px));
+    padding:6px 14px;border-radius:18px;
     background:var(--panel);border:1px solid var(--line);
     backdrop-filter:blur(16px) saturate(150%);
     -webkit-backdrop-filter:blur(16px) saturate(150%);
     box-shadow:0 12px 32px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.05);
-    font-size:11.5px;letter-spacing:.05em;pointer-events:none;white-space:nowrap;
+    font-size:11px;letter-spacing:.03em;pointer-events:none;
     transition:opacity .9s ease;
   }
-  .step{display:flex;align-items:center;gap:6px;color:rgba(255,226,190,.32);transition:color .55s ease}
+  .step{display:flex;align-items:center;gap:5px;color:rgba(255,226,190,.32);transition:color .55s ease;white-space:nowrap}
   .step i{
-    width:18px;height:18px;border-radius:50%;display:grid;place-items:center;
-    border:1px solid rgba(255,207,138,.22);font-style:normal;font-size:10px;line-height:1;
-    transition:all .55s ease;
+    width:17px;height:17px;border-radius:50%;display:grid;place-items:center;
+    border:1px solid rgba(255,207,138,.22);font-style:normal;font-size:9.5px;line-height:1;
+    transition:all .55s ease;flex:none;
   }
   .step.active{color:#ffe4bd}
   .step.active i{
@@ -75,7 +78,40 @@
   }
   .step.done{color:rgba(255,226,190,.62)}
   .step.done i{background:rgba(255,207,138,.16);border-color:rgba(255,207,138,.42);color:#ffd79a}
-  .step-div{width:13px;height:1px;background:rgba(255,207,138,.18)}
+  .step-div{width:10px;height:1px;background:rgba(255,207,138,.18);flex:none}
+
+  /* ---------- 许愿倒计时（3 秒沉浸） ---------- */
+  .wish-screen{
+    position:fixed;left:50%;top:44%;transform:translate(-50%,-50%) scale(.96);
+    z-index:4;text-align:center;pointer-events:none;
+    opacity:0;transition:opacity .8s ease,transform .8s ease;
+  }
+  .wish-screen.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  .wish-screen .wish-kicker{
+    font-size:11.5px;letter-spacing:.42em;text-transform:uppercase;
+    color:rgba(255,214,160,.62);margin-bottom:16px;
+  }
+  .wish-screen .wish-num{
+    font-size:clamp(46px,7vw,78px);font-weight:300;line-height:1;
+    font-family:"Songti SC","STSong",Georgia,serif;
+    background:linear-gradient(100deg,#fff8e8,#ffd08a 50%,#ffab7a);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    filter:drop-shadow(0 0 30px rgba(255,170,90,.5));
+    transition:opacity .2s;
+  }
+  .wish-screen .wish-text{
+    margin-top:14px;font-size:15px;letter-spacing:.12em;color:rgba(255,236,214,.88);
+    text-shadow:0 0 20px rgba(255,170,90,.35);
+  }
+  .wish-screen .wish-track{
+    width:190px;height:3px;border-radius:99px;margin:20px auto 0;
+    background:rgba(255,255,255,.1);overflow:hidden;
+  }
+  .wish-screen .wish-track i{
+    display:block;height:100%;width:0%;border-radius:99px;
+    background:linear-gradient(90deg,#ffb45a,#ffe7bd);
+    box-shadow:0 0 12px rgba(255,190,110,.85);
+  }
 
   /* ---------- 摄像头卡片 ---------- */
   .cam-card{
@@ -406,6 +442,14 @@
   @keyframes spin{to{transform:rotate(360deg)}}
 
   /* ---------- 响应式 ---------- */
+  /* 中等屏：6 步步骤条变宽，收紧面板与品牌，必要时自动换行 */
+  @media (max-width:1180px){
+    .brand h1{font-size:16px}
+    .cam-card{width:220px}
+    .stepper{font-size:10.5px;gap:4px;padding:6px 12px}
+    .step-div{display:none}
+    .step i{width:16px;height:16px;font-size:9px}
+  }
   @media (max-width:820px){
     .brand{top:14px;left:14px}
     .brand h1{font-size:14px}
@@ -456,8 +500,16 @@
     <p>Three.js × MediaPipe Hands</p>
   </header>
 
-  <!-- 步骤条：点燃 → 比耶 → 点赞 → 吹灭 -->
+  <!-- 步骤条：点燃 → 花束 → 比耶 → 点赞 → 许愿 → 吹灭 -->
   <div class="stepper" id="stepper"></div>
+
+  <!-- 许愿倒计时（3 秒沉浸） -->
+  <div class="wish-screen" id="wish-screen">
+    <div class="wish-kicker">✦ Make a Wish ✦</div>
+    <div class="wish-num" id="wish-num">3</div>
+    <div class="wish-text" id="wish-text">闭上眼睛，默念你的愿望…</div>
+    <div class="wish-track"><i id="wish-bar"></i></div>
+  </div>
 
   <aside class="cam-card">
     <div class="cam-head">
@@ -584,6 +636,9 @@ const TRANSITION = {
 
 const PEACE_HOLD = 0.7;    // ✌🏻 确认时长（秒）
 const THUMB_HOLD = 0.7;    // 👍🏻 确认时长（秒）
+const FINGER_HOLD = 0.7;   // ☝🏻 比 1 确认时长（秒）
+const PRAY_HOLD = 1.0;     // 🙏🏻 双手合十确认时长（秒）
+const STILL_HOLD = 1.2;    // 单手并拢静止确认时长（秒）
 
 import * as THREE from 'three';
 
@@ -635,12 +690,14 @@ scene.add(cakeGroup);
 
 const state = {
   spread: 0, spreadTarget: 0,
+  bouquet: 0, bouquetTarget: 0,   // 0=蛋糕 1=花束
   viewYaw: 0, viewYawTarget: 0,
   viewPitch: 0.18, viewPitchTarget: 0.18,
   dist: 6.4, distTarget: 6.4,
   flame: 1, flameTarget: 1,
   handSpin: 0, handSpinTarget: 0,
-  autoSpin: 0
+  autoSpin: 0,
+  autoSpeed: 1                    // 许愿时放慢自转
 };
 let distScale = 1;
 
@@ -651,14 +708,16 @@ const gesture = {
   pinch: 0,
   peace: false,
   thumbsUp: false,
+  oneFinger: false,
+  handCount: 0,
   label: 'none'
 };
 
 /* ============================================================================
-   2. 仪式状态机
+   2. 仪式状态机（6 步）
    ---------------------------------------------------------------------------
-   unlit → lit → posed → gathered → blown
-   点燃    比耶   照片环绕   回到蛋糕    吹灭
+   unlit → lit → bouquet → posed → gathered → wishing → ready → blown
+   点燃    花束   照片环绕    回蛋糕    许愿中     待吹灭     已完成
    ========================================================================== */
 const ritual = {
   stage: 'unlit',
@@ -677,6 +736,12 @@ const ritual = {
   holdPinch: 0,
   holdPeace: 0,
   holdThumb: 0,
+  holdFinger: 0,          // ☝🏻 比 1 保持
+  holdPray: 0,            // 🙏🏻 双手合十保持
+  holdStill: 0,           // 单手并拢静止保持
+  wishCx: 0, wishCy: 0,   // 上一帧手掌中心（判断"静止"）
+  wishSeq: 0,             // 3 秒许愿动画进度
+  holdA: 0, holdB: 0,     // 双手姿势的独立保持值
   photoOut: 0,            // 照片淡出进度 0..1
   blowScore: 0,           // 持续吹气累计
   leaving: false
@@ -797,6 +862,201 @@ for (let i = 0; i < 500; i++) {
     mulC(PAL.trayCore, rand(0.22, 0.5)), rand(2.2, 4.0));
 }
 
+/* ============================================================================
+   3.5 花束目标坐标（比 1 触发）
+   ---------------------------------------------------------------------------
+   与蛋糕粒子一一对应：第 i 个粒子的花束坐标写进 aBouquet，颜色写进 aBouquetColor。
+   一次性生成，之后只在顶点着色器里用 uBouquet 插值，
+   不在每帧回写 BufferAttribute（避免掉帧）。
+
+   ✿ 想调整花束大小 / 配色，改本函数顶部的「布局参数」与「配色」即可。
+   ========================================================================== */
+function buildBouquetTargets(count) {
+  const pos = new Float32Array(count * 3);
+  const col = new Float32Array(count * 3);
+  let w = 0;
+
+  const put = (x, y, z, c) => {
+    if (w >= count) return;
+    const i = w * 3;
+    pos[i] = x; pos[i + 1] = y; pos[i + 2] = z;
+    // 叠加混合下粒子会互相"冲白"，这里整体压一档亮度，让颜色（粉/金/绿）留得住
+    col[i] = clamp01(c[0] * BOUQUET_BRIGHT);
+    col[i + 1] = clamp01(c[1] * BOUQUET_BRIGHT);
+    col[i + 2] = clamp01(c[2] * BOUQUET_BRIGHT);
+    w++;
+  };
+
+  /* ---------------- 配色 ---------------- */
+  const C_GOLD = HEX(0xffd89b);    // 香槟金
+  const C_ROSE = HEX(0xff8fb1);    // 暖玫瑰粉
+  const C_WHITE = HEX(0xfff2e6);   // 柔白
+  const C_LEAF = HEX(0x8fd9a8);    // 淡翡翠金（叶）
+  const C_STEM = HEX(0x5f9c74);    // 花茎
+  const C_RIBBON = HEX(0xffb45a);  // 暖金丝带
+  const C_PAPER = HEX(0xd9b07a);   // 包装纸
+  const C_PAPER_DARK = HEX(0x8a5a2a);
+
+  /* ---------------- 布局参数 ---------------- */
+  const NECK_Y = 0.62;             // 花茎收口高度
+  const CONE_BOT = -0.55;          // 包装纸底部
+  const CONE_TOP = 0.86;           // 包装纸开口高度
+  const CONE_R = 0.92;             // 包装纸开口半径
+  const BLOOM_Y = 1.62;            // 花朵基准高度
+  const BLOOM_R = 0.50;            // 单朵花半径
+  const SPREAD_R = 0.80;           // 花朵排布半径
+  const BLOOMS = 6;                // 花朵数量（5~7 均可）
+  const BOUQUET_BRIGHT = 0.68;     // 花色整体亮度（<1 防止叠加混合冲白）
+
+  /* ---------------- 花朵中心：斐波那契螺旋 ---------------- */
+  const GA = Math.PI * (3 - Math.sqrt(5));
+  const bloomCenters = [];
+  for (let b = 0; b < BLOOMS; b++) {
+    const t = (b + 0.5) / BLOOMS;
+    const rr = SPREAD_R * Math.sqrt(t);
+    const ang = GA * b;
+    bloomCenters.push({
+      x: Math.cos(ang) * rr,
+      y: BLOOM_Y + 0.34 * (1 - Math.sqrt(t)) + rand(-0.04, 0.04),
+      z: Math.sin(ang) * rr,
+      color: [C_GOLD, C_ROSE, C_WHITE][b % 3]
+    });
+  }
+
+  /* ---------------- 1. 花朵：玫瑰曲线花瓣，三层 ---------------- */
+  const nBloom = Math.floor(count * 0.60);
+  const perBloom = Math.floor(nBloom / BLOOMS);
+  for (const c of bloomCenters) {
+    for (let i = 0; i < perBloom; i++) {
+      const layer = Math.floor(Math.random() * 3);          // 0 内层 → 2 外层
+      const layerR = BLOOM_R * (0.42 + layer * 0.29);
+      const th = Math.random() * Math.PI * 2;
+      const k = 5;                                          // 5 瓣玫瑰曲线
+      const petal = Math.abs(Math.cos(k * th));
+      const rad = layerR * (0.22 + 0.78 * Math.pow(petal, 0.7)) * rand(0.86, 1.06);
+      // 中间高、边缘低的穹顶，外加层间抬升，形成立体分层
+      const lift = (1 - rad / (BLOOM_R * 1.25)) * 0.20 + layer * 0.035;
+      put(
+        c.x + Math.cos(th) * rad,
+        c.y + lift + rand(-0.012, 0.012),
+        c.z + Math.sin(th) * rad,
+        mixC(c.color, C_WHITE, Math.min(0.5, rand(0.04, 0.26) + layer * 0.05))
+      );
+    }
+  }
+
+  /* ---------------- 2. 花茎：从收口到每朵花的贝塞尔曲线 ---------------- */
+  const nStem = Math.floor(count * 0.06);
+  const stemPer = Math.max(1, Math.floor(nStem / BLOOMS));
+  for (const c of bloomCenters) {
+    const p0 = { x: 0, y: NECK_Y, z: 0 };
+    const p2 = { x: c.x * 0.92, y: c.y - 0.20, z: c.z * 0.92 };
+    const p1 = { x: c.x * 0.30, y: (NECK_Y + c.y) * 0.5, z: c.z * 0.30 };
+    for (let i = 0; i < stemPer; i++) {
+      const t = Math.random(), mt = 1 - t;
+      put(
+        mt * mt * p0.x + 2 * mt * t * p1.x + t * t * p2.x + rand(-0.016, 0.016),
+        mt * mt * p0.y + 2 * mt * t * p1.y + t * t * p2.y + rand(-0.016, 0.016),
+        mt * mt * p0.z + 2 * mt * t * p1.z + t * t * p2.z + rand(-0.016, 0.016),
+        mixC(C_STEM, C_LEAF, Math.random() * 0.5)
+      );
+    }
+  }
+
+  /* ---------------- 3. 叶子 ---------------- */
+  const nLeaf = Math.floor(count * 0.05);
+  const leafCount = 6;
+  const leafPer = Math.max(1, Math.floor(nLeaf / leafCount));
+  for (let li = 0; li < leafCount; li++) {
+    const a = (li / leafCount) * Math.PI * 2 + 0.4;
+    const lx = Math.cos(a) * 0.40;
+    const lz = Math.sin(a) * 0.40;
+    const ly = NECK_Y + 0.34 + (li % 3) * 0.26;
+    const len = 0.36, wid = 0.13;
+    const dirx = Math.cos(a), dirz = Math.sin(a);
+    for (let i = 0; i < leafPer; i++) {
+      const u = Math.random();                               // 0 叶根 → 1 叶尖
+      const halfW = Math.pow(Math.sin(Math.PI * u), 0.75) * wid;
+      const v = rand(-halfW, halfW);
+      put(
+        lx + dirx * u * len - dirz * v,
+        ly + u * 0.20 + Math.abs(v) * 0.25,                  // 叶片微微上翘
+        lz + dirz * u * len + dirx * v,
+        mixC(C_LEAF, C_STEM, Math.random() * 0.45)
+      );
+    }
+  }
+
+  /* ---------------- 4. 锥形包装纸 ---------------- */
+  const nWrap = Math.floor(count * 0.18);
+  for (let i = 0; i < nWrap; i++) {
+    const t = Math.pow(Math.random(), 0.85);                 // 底部略密
+    const y = CONE_BOT + t * (CONE_TOP - CONE_BOT);
+    const r = 0.10 + (CONE_R - 0.10) * Math.pow(t, 1.15);
+    const a = Math.random() * Math.PI * 2;
+    const crease = 1 + 0.055 * Math.sin(a * 7 + t * 4);      // 纸张褶皱
+    put(
+      Math.cos(a) * r * crease,
+      y + rand(-0.008, 0.008),
+      Math.sin(a) * r * crease,
+      mixC(C_PAPER, C_PAPER_DARK, Math.random() * 0.55)
+    );
+  }
+
+  /* ---------------- 5. 腰封丝带 + 蝴蝶结 ---------------- */
+  const nRib = Math.floor(count * 0.06);
+  const bandN = Math.floor(nRib * 0.42);
+  for (let i = 0; i < bandN; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const r = 0.175 + Math.sin(a * 3) * 0.008;
+    put(Math.cos(a) * r, NECK_Y - 0.16 + rand(-0.02, 0.02), Math.sin(a) * r, C_RIBBON);
+  }
+  const bowY = NECK_Y - 0.14, bowZ = 0.19;
+  for (let i = 0; i < nRib - bandN; i++) {
+    const side = (i % 2 === 0) ? -1 : 1;
+    if (i % 3 === 0) {
+      // 飘带：从结心垂下来
+      const t = Math.random();
+      put(
+        side * (0.09 + t * 0.05),
+        bowY - t * 0.44,
+        bowZ + 0.02 + t * 0.07,
+        mulC(C_RIBBON, rand(0.8, 1.0))
+      );
+    } else {
+      // 蝴蝶结的环
+      const t = Math.random() * Math.PI * 2;
+      put(
+        side * (0.10 + Math.cos(t) * 0.155),
+        bowY + Math.sin(t) * 0.098,
+        bowZ + Math.sin(t) * 0.04,
+        C_RIBBON
+      );
+    }
+  }
+
+  /* ---------------- 6. 外围轻柔星光（补齐剩余名额） ---------------- */
+  let guard = 0;
+  while (w < count && guard < count * 2) {
+    guard++;
+    const a = Math.random() * Math.PI * 2;
+    const r = rand(1.0, 1.9);
+    put(
+      Math.cos(a) * r,
+      rand(-0.4, 2.4),
+      Math.sin(a) * r,
+      mulC(C_GOLD, rand(0.30, 0.75))
+    );
+  }
+  // 极端情况下的兜底（理论上不会走到）
+  while (w < count) put(0, 0, 0, C_GOLD);
+
+  return { pos, col, filled: w };
+}
+
+const PARTICLE_N = buf.pos.length / 3;
+const bouquetTargets = buildBouquetTargets(PARTICLE_N);
+
 const cakeGeo = new THREE.BufferGeometry();
 cakeGeo.setAttribute('position', new THREE.Float32BufferAttribute(buf.pos, 3));
 cakeGeo.setAttribute('aScatter', new THREE.Float32BufferAttribute(buf.sca, 3));
@@ -804,6 +1064,9 @@ cakeGeo.setAttribute('aColor', new THREE.Float32BufferAttribute(buf.col, 3));
 cakeGeo.setAttribute('aSize', new THREE.Float32BufferAttribute(buf.size, 1));
 cakeGeo.setAttribute('aSeed', new THREE.Float32BufferAttribute(buf.seed, 1));
 cakeGeo.setAttribute('aFlame', new THREE.Float32BufferAttribute(buf.flame, 1));
+// 花束目标：静态数据，创建时上传一次即可
+cakeGeo.setAttribute('aBouquet', new THREE.BufferAttribute(bouquetTargets.pos, 3));
+cakeGeo.setAttribute('aBouquetColor', new THREE.BufferAttribute(bouquetTargets.col, 3));
 
 /* ============================================================================
    4. 着色器
@@ -819,18 +1082,23 @@ uniform float uBurst;
 uniform float uSmoke;
 uniform float uSmokeT;
 uniform float uAir;      // 吹气强度：让火焰随气流摇曳
+uniform float uBouquet;  // 0=蛋糕 1=花束
 
 attribute vec3 aScatter;
 attribute vec3 aColor;
 attribute float aSize;
 attribute float aSeed;
 attribute float aFlame;
+attribute vec3 aBouquet;        // 花束形态目标坐标
+attribute vec3 aBouquetColor;   // 花束形态颜色
 
 varying vec3 vColor;
 varying float vAlpha;
+varying float vBouquet;
 
 void main() {
-  vec3 pos = position;
+  vec3 base = mix(position, aBouquet, uBouquet);
+  vec3 pos = base;
   float s = uSpread;
 
   vec3 neb = aScatter;
@@ -841,7 +1109,7 @@ void main() {
   neb.y += sin(uTime * 0.7 + aSeed * 6.2831) * (0.12 + 0.38 * s);
   neb.x += cos(uTime * 0.5 + aSeed * 9.0) * 0.22 * s;
 
-  pos = mix(pos, neb, s);
+  pos = mix(base, neb, s);
 
   if (uBurst > 0.001) {
     pos.y += uBurst * (0.55 + aSeed * 2.0);
@@ -853,7 +1121,7 @@ void main() {
   float kind = aFlame;
   float sizeMul = 1.0;
   float alpha = 1.0;
-  vec3 col = aColor;
+  vec3 col = mix(aColor, aBouquetColor, uBouquet);
 
   if (kind > 0.5 && kind < 1.5) {
     /* —— 火焰：基础抖动 + 被风吹偏 —— */
@@ -870,8 +1138,9 @@ void main() {
     float flic  = 0.72 + 0.28 * sin(uTime * 9.0 + aSeed * 21.0);
     float flic2 = 0.86 + 0.14 * sin(uTime * 17.0 + aSeed * 8.0);
     col *= uFlame * flic * flic2 * 1.18 * (1.0 - uAir * 0.25);
-    alpha = 0.92 * uIgnite;
-    sizeMul = (0.30 + 0.70 * uIgnite) * (1.0 - uAir * 0.3);
+    /* 变成花束时烛火柔和淡出 */
+    alpha = 0.92 * uIgnite * (1.0 - uBouquet);
+    sizeMul = (0.30 + 0.70 * uIgnite) * (1.0 - uAir * 0.3) * (1.0 - uBouquet * 0.6);
   } else if (kind > 1.5) {
     float life = fract(uSmokeT * 0.5 + aSeed * 0.5);
     pos.y += life * 1.35;
@@ -902,14 +1171,18 @@ void main() {
   gl_PointSize = clamp(ps * (10.0 / max(0.001, -mv.z)), 0.6, 40.0);
 
   alpha *= mix(1.0, 0.78, s);
+  /* 花束模式整体降低单粒子权重：密集叠加时颜色才不会一起冲成白色 */
+  alpha *= mix(1.0, 0.52, uBouquet);
   vColor = col;
   vAlpha = alpha;
+  vBouquet = uBouquet;
 }
 `;
 
 const FRAG = /* glsl */`
 varying vec3 vColor;
 varying float vAlpha;
+varying float vBouquet;
 
 void main() {
   vec2 uv = gl_PointCoord - 0.5;
@@ -918,7 +1191,9 @@ void main() {
 
   float soft = 1.0 - smoothstep(0.0, 0.5, d);
   float core = pow(soft, 2.6);
-  vec3 col = vColor * (0.6 + 2.4 * core);
+  /* 蛋糕：强核心增益（发光粒子感）；花束：压低核心增益，保住粉/金/绿的本来颜色 */
+  float boost = mix(0.6 + 2.4 * core, 0.72 + 0.68 * core, vBouquet);
+  vec3 col = vColor * boost;
   gl_FragColor = vec4(col, core * vAlpha);
 }
 `;
@@ -934,7 +1209,8 @@ const cakeMat = new THREE.ShaderMaterial({
     uBurst: { value: 0 },
     uSmoke: { value: 0 },
     uSmokeT: { value: 0 },
-    uAir: { value: 0 }
+    uAir: { value: 0 },
+    uBouquet: { value: 0 }
   },
   vertexShader: CAKE_VERT,
   fragmentShader: FRAG,
@@ -999,6 +1275,7 @@ const dustMat = new THREE.ShaderMaterial({
 
     varying vec3 vColor;
     varying float vAlpha;
+    varying float vBouquet;
 
     void main() {
       vec3 pos = position;
@@ -1026,6 +1303,7 @@ const dustMat = new THREE.ShaderMaterial({
       vColor = aColor * (1.0 + uWish * 0.45) * (1.0 + uBurst * 0.9);
       vColor = mix(vColor, vec3(1.0, 0.86, 0.58), uBurst * 0.55);
       vAlpha = (0.10 + 0.45 * tw) * (1.0 + uWish * 0.55);
+      vBouquet = 0.0;   // 背景浮尘始终使用"蛋糕"的发光曲线
     }
   `,
   fragmentShader: FRAG,
@@ -1086,6 +1364,27 @@ burstGlow.position.set(0, 1.15, 0);
 burstGlow.scale.set(2.5, 2.5, 1);
 burstGlow.visible = false;
 scene.add(burstGlow);
+
+/* 许愿光环：两圈暖金光环从地面缓缓升起 */
+const wishRings = [];
+for (let i = 0; i < 2; i++) {
+  const ring = new THREE.Mesh(
+    new THREE.RingGeometry(1.55, 1.78, 72),
+    new THREE.MeshBasicMaterial({
+      color: 0xffd9a0,
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    })
+  );
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.y = -0.3;
+  ring.visible = false;
+  scene.add(ring);
+  wishRings.push(ring);
+}
 
 /* ============================================================================
    7. 环绕照片（质感版）
@@ -1314,6 +1613,10 @@ const viewerFallback = $('viewer-fallback');
 const viewerCapText = $('viewer-cap-text');
 const viewerCapIdx = $('viewer-cap-idx');
 const photoTipEl = $('photo-tip');
+const wishScreenEl = $('wish-screen');
+const wishNumEl = $('wish-num');
+const wishTextEl = $('wish-text');
+const wishBarEl = $('wish-bar');
 
 function setStatus(text, active = false) {
   if (statusEl.textContent === text) return;
@@ -1393,7 +1696,7 @@ function endDrag(e) {
     if (card) { openViewer(card.index); return; }
 
     if (ritual.stage === 'unlit' && e && nearCandle(e)) { igniteCandle('点击蜡烛'); return; }
-    if (ritual.stage === 'gathered' && e && nearCandle(e)) { blowOut('点击蜡烛'); return; }
+    if (ritual.stage === 'ready' && e && nearCandle(e)) { blowOut('点击蜡烛'); return; }
 
     state.spreadTarget = state.spreadTarget > 0.5 ? 0 : 1;
   }
@@ -1445,7 +1748,7 @@ function setCamUI(on) {
   dotEl.className = 'dot' + (on ? ' live' : '');
   camPlaceholder.style.display = on ? 'none' : 'flex';
   hintEl.textContent = on
-    ? '✌🏻 展开照片 · 👍🏻 回到蛋糕 · 张开手掌扩散'
+    ? '☝🏻 变花束 · ✌🏻 散星空 · 👍🏻 回蛋糕 · 🙏🏻 许愿'
     : '拖拽旋转 · 滚轮缩放 · 点击画面切换扩散 / 聚拢';
 }
 
@@ -1481,7 +1784,7 @@ async function startCamera() {
         locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${f}`
       });
       hands.setOptions({
-        maxNumHands: 1,
+        maxNumHands: 2,          // 许愿环节需要"双手合十"，最多识别 2 只手
         modelComplexity: 0,
         minDetectionConfidence: 0.6,
         minTrackingConfidence: 0.55,
@@ -1543,9 +1846,20 @@ btnCam.addEventListener('click', () => {
 function onHandResults(results) {
   drawOverlay(results);
 
-  const list = results.multiHandLandmarks;
-  if (!list || list.length === 0) {
+  const list = results.multiHandLandmarks || [];
+  lastHandList = list;
+  gesture.handCount = list.length;
+
+  if (list.length === 0) {
     gesture.active = false;
+    gesture.oneFinger = false;
+    // 手离开画面：保持量缓缓衰减（容忍 MediaPipe 偶发丢帧），而不是立刻清零
+    ritual.holdPinch *= 0.92;
+    ritual.holdPeace *= 0.92;
+    ritual.holdThumb *= 0.92;
+    ritual.holdFinger *= 0.92;
+    ritual.holdPray *= 0.92;
+    ritual.holdStill *= 0.92;
     if (performance.now() - gesture.lastSeen > 800) {
       setStatus('未检测到手 · 可继续用鼠标操作');
       barOpen.style.width = (state.spread * 100) + '%';
@@ -1560,6 +1874,8 @@ function onHandResults(results) {
 }
 
 let lastHandTime = 0;
+let lastHandList = [];
+const pct = v => Math.round(clamp01(v) * 100);
 
 function analyzeHand(lm) {
   const d = (i, j) => Math.hypot(
@@ -1585,6 +1901,9 @@ function analyzeHand(lm) {
   const opennessRaw = clamp01((ext + (thumbExt ? 1 : 0)) / 5);
   const pinchRaw = clamp01((0.62 - d(4, 8) / palm) / 0.42);
 
+  // ☝🏻 比 1：仅食指伸直，中/无名/小指明确收拢（拇指自然收拢，不作要求）
+  const oneFinger = indexExt && !middleExt && !ringExt && !pinkyExt;
+
   // ✌🏻：食指 + 中指伸直，无名指 + 小指收拢
   const peace = indexExt && middleExt && !ringExt && !pinkyExt;
 
@@ -1598,12 +1917,14 @@ function analyzeHand(lm) {
 
   gesture.peace = peace;
   gesture.thumbsUp = thumbsUp;
+  gesture.oneFinger = oneFinger;
 
   gesture.openness = damp(gesture.openness, opennessRaw, 9, 1 / 30);
   gesture.pinch = damp(gesture.pinch, pinchRaw, 9, 1 / 30);
 
-  // 照片星环阶段锁定最大分散
-  if (gesture.pinch < 0.6 && ritual.stage !== 'posed') {
+  // 照片星环阶段锁定最大分散；花束变形期间不插手，让形态干净地过渡
+  const shapeStages = ritual.stage === 'lit' || ritual.stage === 'bouquet' || ritual.stage === 'posed';
+  if (gesture.pinch < 0.6 && !shapeStages) {
     state.spreadTarget = clamp01((gesture.openness - 0.32) / 0.56);
   }
 
@@ -1613,7 +1934,7 @@ function analyzeHand(lm) {
   state.handSpinTarget = (mx - 0.5) * Math.PI * 1.4;
   state.viewPitchTarget = clamp(0.18 + (cy - 0.45) * 1.1, -0.25, 1.05);
 
-  if (ritual.stage !== 'posed') {
+  if (ritual.stage !== 'posed' && ritual.stage !== 'bouquet') {
     state.distTarget = clamp(6.4 - gesture.pinch * 2.0, 3.6, 9.6);
   }
   state.flameTarget = 1.0 + gesture.pinch * 0.85;
@@ -1623,21 +1944,35 @@ function analyzeHand(lm) {
   lastHandTime = nowH;
   updateRitualGestures(hdt);
 
-  // 状态文案：✌🏻 / 👍🏻 的进度要给足反馈；吹蜡烛阶段不覆盖（那里显示吹气进度）
-  if (ritual.stage !== 'gathered' && ritual.stage !== 'blown') {
+  // 状态文案：每个手势的保持进度都要有反馈；吹蜡烛/许愿倒计时阶段不覆盖状态栏
+  if (ritual.stage !== 'ready' && ritual.stage !== 'wishing' && ritual.stage !== 'blown') {
     let label;
-    if (ritual.stage === 'lit' && peace) {
-      label = `检测到：比耶 ✌🏻 · 保持 ${Math.round(clamp01(ritual.holdPeace / PEACE_HOLD) * 100)}%`;
+    if (ritual.stage === 'lit' && oneFinger) {
+      label = `检测到：比 1 ☝🏻 · 保持 ${pct(ritual.holdFinger / FINGER_HOLD)}% 变花束`;
+    } else if (ritual.stage === 'bouquet' && peace) {
+      label = `检测到：比耶 ✌🏻 · 保持 ${pct(ritual.holdPeace / PEACE_HOLD)}% 展开照片`;
     } else if (ritual.stage === 'posed' && thumbsUp) {
-      label = `检测到：点赞 👍🏻 · 保持 ${Math.round(clamp01(ritual.holdThumb / THUMB_HOLD) * 100)}% 回蛋糕`;
+      label = `检测到：点赞 👍🏻 · 保持 ${pct(ritual.holdThumb / THUMB_HOLD)}% 回蛋糕`;
     } else if (ritual.stage === 'posed') {
       label = '照片环绕中 · 比个赞 👍🏻 回到蛋糕';
+    } else if (ritual.stage === 'bouquet') {
+      label = '花束已成型 🌷 · 比个耶 ✌🏻 散成星空';
+    } else if (ritual.stage === 'lit') {
+      label = '比个 1 ☝🏻 变出花束';
+    } else if (ritual.stage === 'gathered') {
+      if (gesture.handCount >= 2 && ritual.holdPray > 0) {
+        label = `检测到：双手合十 🙏🏻 · 保持 ${pct(ritual.holdPray / PRAY_HOLD)}%`;
+      } else if (ritual.holdStill > 0) {
+        label = `检测到：许愿手 · 静止 ${pct(ritual.holdStill / STILL_HOLD)}%`;
+      } else {
+        label = '双手合十 🙏🏻 或单手并拢静止，开始许愿';
+      }
     } else if (gesture.pinch > 0.62) {
       label = `检测到：捏合 · 拉近 ${Math.round(gesture.pinch * 100)}%`;
     } else if (gesture.openness > 0.74) {
       label = `检测到：张开手掌 · 扩散 ${Math.round(state.spreadTarget * 100)}%`;
     } else if (gesture.openness < 0.3) {
-      label = '检测到：握拳 · 聚拢成蛋糕';
+      label = '检测到：握拳 · 聚拢';
     } else {
       label = `检测到：半握 · 过渡 ${Math.round(state.spreadTarget * 100)}%`;
     }
@@ -1661,8 +1996,17 @@ function updateRitualGestures(dt) {
     }
   }
 
-  // ② 比耶保持 0.7 秒 → 展开照片星环
+  // ② 比 1（只伸食指）保持 0.7 秒 → 变成花束
   if (ritual.stage === 'lit') {
+    ritual.holdFinger = gesture.oneFinger ? ritual.holdFinger + dt : 0;
+    if (ritual.holdFinger >= FINGER_HOLD) {
+      ritual.holdFinger = 0;
+      bouquetMorph('比 1 手势');
+    }
+  }
+
+  // ③ 比耶保持 0.7 秒 → 花束散成星空 + 照片
+  if (ritual.stage === 'bouquet') {
     ritual.holdPeace = gesture.peace ? ritual.holdPeace + dt : 0;
     if (ritual.holdPeace >= PEACE_HOLD) {
       ritual.holdPeace = 0;
@@ -1670,13 +2014,70 @@ function updateRitualGestures(dt) {
     }
   }
 
-  // ③ 点赞保持 0.7 秒 → 回到蛋糕形状
+  // ④ 点赞保持 0.7 秒 → 聚拢回蛋糕
   if (ritual.stage === 'posed') {
     ritual.holdThumb = gesture.thumbsUp ? ritual.holdThumb + dt : 0;
     if (ritual.holdThumb >= THUMB_HOLD) {
       ritual.holdThumb = 0;
       gatherBack('点赞手势');
     }
+  }
+
+  // ⑤ 双手合十 / 单手并拢静止 → 进入许愿
+  if (ritual.stage === 'gathered') updateWishPose(dt);
+}
+
+/* ---------- 12.4 许愿手势：🙏🏻 双手合十 / 单手并拢静止 ---------- */
+function palmSize(h) {
+  return Math.max(0.02, Math.hypot(h[0].x - h[9].x, h[0].y - h[9].y));
+}
+
+function updateWishPose(dt) {
+  const list = lastHandList;
+  let pray = false;
+  let still = false;
+
+  // —— 双手合十：两手掌心靠近 + 指尖朝上 ——
+  if (list.length >= 2) {
+    const a = list[0], b = list[1];
+    const palm = (palmSize(a) + palmSize(b)) * 0.5;
+    const ax = (a[0].x + a[9].x) * 0.5, ay = (a[0].y + a[9].y) * 0.5;
+    const bx = (b[0].x + b[9].x) * 0.5, by = (b[0].y + b[9].y) * 0.5;
+    const near = Math.hypot(ax - bx, ay - by) / palm < 2.2;
+    const upA = a[12].y < a[0].y - 0.03;
+    const upB = b[12].y < b[0].y - 0.03;
+    pray = near && upA && upB;
+  }
+
+  // —— 单手兼容：五指并拢、竖直、几乎不动 ——
+  if (list.length === 1) {
+    const h = list[0];
+    const palm = palmSize(h);
+    const d = (i, j) => Math.hypot(h[i].x - h[j].x, h[i].y - h[j].y);
+    const ext = d(8, 0) > d(6, 0) * 1.12 && d(12, 0) > d(10, 0) * 1.12 &&
+                d(16, 0) > d(14, 0) * 1.12 && d(20, 0) > d(18, 0) * 1.12;
+    const span = d(8, 20) / palm;                 // 食指-小指的张开度
+    const vertical = h[12].y < h[0].y - 0.03;
+    const cx = (h[0].x + h[9].x) * 0.5;
+    const cy = (h[0].y + h[9].y) * 0.5;
+    const moved = Math.hypot(cx - ritual.wishCx, cy - ritual.wishCy);
+    ritual.wishCx = cx;
+    ritual.wishCy = cy;
+    still = ext && span < 1.45 && vertical && moved < 0.02;
+  } else {
+    ritual.wishCx = 0;
+    ritual.wishCy = 0;
+  }
+
+  ritual.holdPray = pray ? ritual.holdPray + dt : 0;
+  ritual.holdStill = still ? ritual.holdStill + dt : 0;
+
+  if (ritual.holdPray >= PRAY_HOLD) {
+    ritual.holdPray = 0;
+    startWish('双手合十');
+  } else if (ritual.holdStill >= STILL_HOLD) {
+    ritual.holdStill = 0;
+    startWish('单手许愿');
   }
 }
 
@@ -1780,7 +2181,7 @@ async function enableMic() {
     setStatus('麦克风不可用：' + (err?.message || err) + ' · 请用按钮吹灭');
     return false;
   } finally {
-    if (ritual.stage === 'gathered') syncRitualUI();
+    if (ritual.stage === 'ready' || ritual.stage === 'gathered') syncRitualUI();
   }
 }
 
@@ -1968,14 +2369,19 @@ document.addEventListener('keydown', e => {
 /* ============================================================================
    13. 仪式状态机（点燃 → 比耶 → 点赞 → 吹灭）
    ========================================================================== */
-const STEPS = ['点燃', '比耶', '点赞', '吹灭'];
+const STEPS = ['点燃', '花束', '比耶', '点赞', '许愿', '吹灭'];
 
 function stageIndex(s) {
-  if (s === 'unlit') return 0;
-  if (s === 'lit') return 1;
-  if (s === 'posed') return 2;
-  if (s === 'gathered') return 3;
-  return 4;
+  switch (s) {
+    case 'unlit': return 0;
+    case 'lit': return 1;
+    case 'bouquet': return 2;
+    case 'posed': return 3;
+    case 'gathered': return 4;
+    case 'wishing': return 4;
+    case 'ready': return 5;
+    default: return 6;          // blown：全部点亮
+  }
 }
 
 /** ① 点燃蜡烛 */
@@ -1986,14 +2392,34 @@ function igniteCandle(source) {
   ritual.igniteTarget = 1;
   ritual.smoke = 0;
   ritual.holdPinch = 0;
-  ritual.holdPeace = 0;
-  setStatus(`蜡烛已点燃（${source}）· 接下来比个耶 ✌🏻`, true);
+  ritual.holdFinger = 0;
+  setStatus(`蜡烛已点燃（${source}）· 比个 1 ☝🏻 变出花束`, true);
   syncRitualUI();
 }
 
-/** ② 比耶：粒子拉到最大 + 照片星环 */
-function posePhotos(source) {
+/** ② 比 1：三层蛋糕 → 3D 发光粒子花束 */
+function bouquetMorph(source) {
   if (ritual.stage !== 'lit' || ritual.leaving) return;
+  ritual.stage = 'bouquet';
+  ritual.t = 0;
+  ritual.holdFinger = 0;
+
+  state.bouquetTarget = 1;        // 形态插值：主循环 damp + 着色器 mix
+  state.spreadTarget = 0;
+  ritual.igniteTarget = 0;        // 烛火柔和淡出
+
+  // 视角自动微调到最适合欣赏花束的角度
+  state.distTarget = 5.9;
+  state.viewPitchTarget = 0.14;
+  state.autoSpeed = 0.7;
+
+  setStatus(`花束成型 🌷（${source}）· 比个耶 ✌🏻 让它散成星空`, true);
+  syncRitualUI();
+}
+
+/** ③ 比耶：从花束散开成星空 + 照片星环 */
+function posePhotos(source) {
+  if (ritual.stage !== 'bouquet' || ritual.leaving) return;
   ritual.stage = 'posed';
   ritual.t = 0;
   ritual.holdPeace = 0;
@@ -2017,32 +2443,76 @@ function posePhotos(source) {
   syncRitualUI();
 }
 
-/** ③ 点赞：照片收起、粒子聚拢回蛋糕 */
+/** ④ 点赞：照片收起、粒子聚拢回三层蛋糕，烛火重新点亮 */
 function gatherBack(source) {
   if (ritual.stage !== 'posed' || ritual.leaving) return;
   ritual.stage = 'gathered';
   ritual.t = 0;
   ritual.holdThumb = 0;
+  ritual.holdPray = 0;
+  ritual.holdStill = 0;
+  ritual.wishCx = 0;
+  ritual.wishCy = 0;
 
   state.spreadTarget = 0;
+  state.bouquetTarget = 0;        // 花束 → 蛋糕
+  ritual.igniteTarget = 1;        // 烛火重亮
   ritual.wishTarget = 0;
   state.distTarget = 6.4;
+  state.autoSpeed = 1;
 
   hoveredCard = null;
   photoTipEl.classList.remove('show');
   canvas.style.cursor = 'grab';
   closeViewer();
 
-  setStatus(`点赞成功 👍🏻 蛋糕回来了（${source}）· 吹灭蜡烛吧`, true);
+  setStatus(`点赞成功 👍🏻 蛋糕回来了（${source}）· 双手合十 🙏🏻 许愿`, true);
+  syncRitualUI();
+}
+
+/** ⑤ 许愿：3 秒沉浸动画 */
+function startWish(source) {
+  if (ritual.stage !== 'gathered' || ritual.leaving) return;
+  ritual.stage = 'wishing';
+  ritual.t = 0;
+  ritual.wishSeq = 0;
+  ritual.holdPray = 0;
+  ritual.holdStill = 0;
+  ritual.wishTarget = 1;          // 暖金许愿光尘螺旋上升
+  ritual.wishT = 0;
+
+  state.distTarget = 5.5;         // 镜头轻微推近
+  state.autoSpeed = 0.35;         // 放慢旋转
+
+  wishScreenEl.classList.add('show');
+  wishNumEl.textContent = '3';
+  wishTextEl.textContent = '闭上眼睛，默念你的愿望…';
+  wishBarEl.style.width = '0%';
+
+  setStatus(`许愿中（${source}）· 闭上眼睛，默念你的愿望`, true);
+  syncRitualUI();
+}
+
+/** ⑤→⑥ 许愿完成 */
+function finishWish() {
+  if (ritual.stage !== 'wishing') return;
+  ritual.stage = 'ready';
+  ritual.t = 0;
+  ritual.wishTarget = 0.25;
+  state.distTarget = 6.4;
+  state.autoSpeed = 1;
+
+  wishScreenEl.classList.remove('show');
+  setStatus('愿望已封存 ✨ 现在可以吹灭蜡烛了', true);
   syncRitualUI();
 
-  // 回到蛋糕后自动尝试开启麦克风（被拒绝也不影响按钮兜底）
+  // 进入吹灭环节：自动尝试开启麦克风（被拒绝也不影响按钮兜底）
   enableMic();
 }
 
-/** ④ 吹灭蜡烛 → 庆祝转场 */
+/** ⑥ 吹灭蜡烛 → 庆祝转场 */
 function blowOut(source) {
-  if (ritual.stage !== 'gathered' || ritual.leaving) return;
+  if (ritual.stage !== 'ready' || ritual.leaving) return;
   ritual.stage = 'blown';
   ritual.leaving = true;
   ritual.t = 0;
@@ -2103,17 +2573,31 @@ function syncRitualUI() {
         <span class="ritual-tip">点蜡烛火焰 / 捏合手势保持 0.8 秒</span>`;
       break;
     case 'lit':
-      html = `<span class="ritual-label">② 比耶 ✌🏻 展开回忆星环</span>
+      html = `<span class="ritual-label">② 比 1 ☝🏻 变出花束</span>
+        <button class="btn primary" data-act="bouquet">比 1 / 变成花束</button>
+        <span class="ritual-tip">只伸食指，中指·无名指·小指收拢，保持 0.7 秒</span>`;
+      break;
+    case 'bouquet':
+      html = `<span class="ritual-label">③ 比耶 ✌🏻 让花束散成星空</span>
         <button class="btn primary" data-act="peace">比耶 / 展开照片</button>
         <span class="ritual-tip">食指+中指伸直，其余收拢，保持 0.7 秒</span>`;
       break;
     case 'posed':
-      html = `<span class="ritual-label">③ 比个赞 👍🏻 回到蛋糕前准备吹蜡烛</span>
+      html = `<span class="ritual-label">④ 比个赞 👍🏻 回到蛋糕</span>
         <button class="btn primary" data-act="gather">回到蛋糕形状</button>
         <span class="ritual-tip">拇指向上、四指收拢，保持 0.7 秒</span>`;
       break;
     case 'gathered':
-      html = `<span class="ritual-label">④ 吹灭蜡烛</span>
+      html = `<span class="ritual-label">⑤ 双手合十 🙏🏻 许愿</span>
+        <button class="btn primary" data-act="wish">双手合十 / 闭眼许愿</button>
+        <span class="ritual-tip">双手合十 1 秒，或单手五指并拢静止 1.2 秒</span>`;
+      break;
+    case 'wishing':
+      html = `<span class="ritual-label">许愿中…</span>
+        <span class="ritual-tip">闭上眼睛，默念你的愿望</span>`;
+      break;
+    case 'ready':
+      html = `<span class="ritual-label">⑥ 吹灭蜡烛</span>
         <button class="btn primary" data-act="blow">吹灭蜡烛</button>
         ${micOn
           ? `<span class="mic-meter" title="麦克风实时电平"><i id="mic-fill"></i></span>
@@ -2124,7 +2608,7 @@ function syncRitualUI() {
         <span class="ritual-tip">${micOn ? '对着麦克风吹气约 0.6 秒' : '或点上方按钮吹灭'}</span>`;
       break;
     case 'blown':
-      html = `<span class="ritual-label">④ 蜡烛已熄灭 · 愿望已寄出</span>
+      html = `<span class="ritual-label">⑥ 蜡烛已熄灭 · 愿望已寄出</span>
         <span class="ritual-tip">正在为你开启专属信件…</span>`;
       break;
   }
@@ -2144,11 +2628,13 @@ ritualEl.addEventListener('click', e => {
   const btn = e.target.closest('[data-act]');
   if (!btn) return;
   switch (btn.dataset.act) {
-    case 'ignite': igniteCandle('按钮'); break;
-    case 'peace':  posePhotos('按钮'); break;
-    case 'gather': gatherBack('按钮'); break;
-    case 'blow':   blowOut('按钮'); break;
-    case 'mic':    enableMic(); break;
+    case 'ignite':  igniteCandle('按钮'); break;
+    case 'bouquet': bouquetMorph('按钮'); break;
+    case 'peace':   posePhotos('按钮'); break;
+    case 'gather':  gatherBack('按钮'); break;
+    case 'wish':    startWish('按钮'); break;
+    case 'blow':    blowOut('按钮'); break;
+    case 'mic':     enableMic(); break;
   }
 });
 
@@ -2199,6 +2685,7 @@ function animate() {
 
   /* ---- 状态插值 ---- */
   state.spread = damp(state.spread, state.spreadTarget, 2.2, dt);
+  state.bouquet = damp(state.bouquet, state.bouquetTarget, 1.8, dt);
   state.viewYaw = damp(state.viewYaw, state.viewYawTarget, 6.0, dt);
   state.viewPitch = damp(state.viewPitch, state.viewPitchTarget, 5.0, dt);
   state.dist = damp(state.dist, state.distTarget, 4.0, dt);
@@ -2234,8 +2721,32 @@ function animate() {
   }
   ritual.wish = damp(ritual.wish, ritual.wishTarget, 1.2, dt);
 
-  /* ---- 麦克风吹气 ---- */
-  if (micOn && ritual.stage === 'gathered') {
+  /* ---- ⑤ 许愿：3 秒沉浸倒计时 ---- */
+  if (ritual.stage === 'wishing') {
+    ritual.wishSeq += dt;
+    const p = clamp01(ritual.wishSeq / 3);
+    const n = Math.min(3, Math.max(1, Math.ceil(3 - ritual.wishSeq)));
+    if (wishNumEl.textContent !== String(n)) wishNumEl.textContent = String(n);
+    wishBarEl.style.width = (p * 100) + '%';
+    if (ritual.wishSeq >= 3) finishWish();
+  }
+
+  /* ---- 许愿光环：从地面缓缓升起、渐隐 ---- */
+  if (ritual.wish > 0.02) {
+    for (let i = 0; i < wishRings.length; i++) {
+      const ring = wishRings[i];
+      const ph = (ritual.wishSeq / 3 + i * 0.5) % 1;
+      ring.visible = true;
+      ring.position.y = -0.35 + ph * 2.9;
+      ring.scale.setScalar(0.75 + ph * 0.55);
+      ring.material.opacity = Math.sin(ph * Math.PI) * 0.5 * clamp01(ritual.wish);
+    }
+  } else {
+    for (const ring of wishRings) ring.visible = false;
+  }
+
+  /* ---- 麦克风吹气（只在"待吹灭"阶段生效） ---- */
+  if (micOn && ritual.stage === 'ready') {
     const b = detectBlow();
     ritual.air = damp(ritual.air, b, 10, dt);
 
@@ -2334,13 +2845,14 @@ function animate() {
   }
 
   /* ---- 蛋糕自转 ---- */
-  if (!gesture.active && !dragging) state.autoSpin += dt * 0.15;
+  if (!gesture.active && !dragging) state.autoSpin += dt * 0.15 * state.autoSpeed;
   cakeGroup.rotation.y = damp(cakeGroup.rotation.y, state.handSpin + state.autoSpin, 2.6, dt);
   cakeGroup.position.y = Math.sin(t * 0.9) * 0.018;
 
   /* ---- uniforms ---- */
   cakeMat.uniforms.uTime.value = t;
   cakeMat.uniforms.uSpread.value = state.spread;
+  cakeMat.uniforms.uBouquet.value = state.bouquet;
   cakeMat.uniforms.uFlame.value = state.flame;
   cakeMat.uniforms.uIgnite.value = ritual.ignite;
   cakeMat.uniforms.uBurst.value = ritual.burst;
@@ -2414,10 +2926,11 @@ window.addEventListener('pointerdown', () => {
 }, { passive: true });
 
 window.__cakeDebug = {
-  ritual, state, gesture, renderer, camera, analyzeHand,
+  ritual, state, gesture, renderer, camera, analyzeHand, onHandResults,
   CARD_URL, MEMORY_PHOTOS, photoGroup, photos,
-  igniteCandle, posePhotos, gatherBack, blowOut, openViewer,
+  igniteCandle, bouquetMorph, posePhotos, gatherBack, startWish, finishWish, blowOut, openViewer,
   enableMic, detectBlow, classifyBlow, MIC,
+  bouquetTargets,
   micOn: () => micOn,
   micState: () => micOn ? { state: audioCtx?.state, rms: +MIC.rms.toFixed(4), flat: +MIC.flatness.toFixed(3), low: +MIC.lowRatio.toFixed(3), level: +MIC.level.toFixed(3) } : null
 };
