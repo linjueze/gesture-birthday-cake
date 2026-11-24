@@ -71,7 +71,7 @@ const TILT = 0.22;            // 前倾角
 两个常量都在 `index.html` 顶部：
 
 ```js
-const CARD_URL = "https://3dcards.theliang.com/letter/q03wJXlKqAWf";
+const CARD_URL = "https://linjueze.github.io/3d-birthday-cards/letter/?c=z.RcxBaoNAAIXhq6Rv_YQZZ3R0ll31DpLFVE0iMUaMbQmlIGmgBHqEQHe9QA_gYUokxygJhi4_3s97xTOsJFpYpK7Kyrws5ovWS90yB1HD4sW1eZOuy3UDYgaLTd4UMxANLMqiArGCxYOr6-3kvmjaRea2d5Nh3w-HbjgeTv37sO9P37vh-HXuPs8fP7_dDsQGFosnV81BPMLCF77xhPSEBLGExQpEBotL28ImSUhfCRojKIWYMokYakMVx6MVTaho_Gh0QK1DBvq2G_paUMtgtJRUWlBKxeji-Pr932uaUFNq_-rp2x8";
 
 const MEMORY_PHOTOS = [
   { url: "https://picsum.photos/seed/cake-01/720/540", caption: "那年冬天的第一块蛋糕" },
