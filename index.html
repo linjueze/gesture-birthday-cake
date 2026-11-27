@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>手势控制 · 3D 发光粒子生日蛋糕 · 比耶星环</title>
+<title>Happy Birthday · 专属星光生日蛋糕</title>
 <style>
   :root{
     --gold:#ffcf8a;
@@ -39,15 +39,17 @@
   .brand{
     position:absolute;top:22px;left:26px;pointer-events:none;
     text-shadow:0 2px 18px rgba(0,0,0,.6);
+    transition:opacity .9s ease,transform .9s ease;
   }
   .brand h1{
-    margin:0;font-size:19px;font-weight:600;letter-spacing:.06em;
-    background:linear-gradient(100deg,#ffe9c9,#ffc078 62%,#ff9f7a);
+    margin:0;font-size:19px;font-weight:600;letter-spacing:.08em;
+    font-family:"Songti SC","STSong",Georgia,"PingFang SC",serif;
+    background:linear-gradient(100deg,#fff1da,#ffc882 60%,#ffa382);
     -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
   }
   .brand p{
-    margin:6px 0 0;font-size:11.5px;letter-spacing:.22em;text-transform:uppercase;
-    color:rgba(255,226,190,.5);
+    margin:5px 0 0;font-size:11.5px;letter-spacing:.14em;
+    color:rgba(255,226,190,.54);
   }
 
   /* ---------- 步骤条（6 步，紧凑 + 可换行） ---------- */
@@ -55,15 +57,18 @@
     position:absolute;top:22px;left:50%;transform:translateX(-50%);
     display:flex;gap:5px;align-items:center;justify-content:center;flex-wrap:wrap;
     row-gap:5px;
-    /* 两侧给品牌与手势面板留位，避免 6 步变宽后重叠 */
-    max-width:min(880px, calc(100vw - 620px));
+    /* 右上角常态已折叠为小胶囊，给 6 步进度条更充裕的水平空间 */
+    max-width:min(880px, calc(100vw - 440px));
     padding:6px 14px;border-radius:18px;
     background:var(--panel);border:1px solid var(--line);
     backdrop-filter:blur(16px) saturate(150%);
     -webkit-backdrop-filter:blur(16px) saturate(150%);
     box-shadow:0 12px 32px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.05);
     font-size:11px;letter-spacing:.03em;pointer-events:none;
-    transition:opacity .9s ease;
+    transition:opacity .9s ease,max-width .4s ease;
+  }
+  body.cam-open .stepper{
+    max-width:min(880px, calc(100vw - 600px));
   }
   .step{display:flex;align-items:center;gap:5px;color:rgba(255,226,190,.32);transition:color .55s ease;white-space:nowrap}
   .step i{
@@ -113,20 +118,76 @@
     box-shadow:0 0 12px rgba(255,190,110,.85);
   }
 
-  /* ---------- 摄像头卡片 ---------- */
+  /* ---------- 右上角极简工具胶囊（音乐 + 手势） ---------- */
+  .top-tools{
+    position:absolute;top:22px;right:26px;z-index:4;
+    display:flex;align-items:center;gap:8px;
+    transition:opacity .9s ease;
+  }
+  .pill-btn{
+    appearance:none;display:inline-flex;align-items:center;gap:6px;
+    padding:8px 13px;border-radius:999px;cursor:pointer;
+    background:var(--panel);border:1px solid var(--line);color:#ffeacb;
+    font:inherit;font-size:12px;letter-spacing:.04em;white-space:nowrap;
+    backdrop-filter:blur(16px) saturate(150%);
+    -webkit-backdrop-filter:blur(16px) saturate(150%);
+    box-shadow:0 10px 28px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.05);
+    transition:background .22s,border-color .22s,color .22s,transform .12s,box-shadow .22s;
+  }
+  .pill-btn:hover{background:rgba(255,214,160,.14);border-color:rgba(255,207,138,.42)}
+  .pill-btn:active{transform:scale(.96)}
+  .pill-btn:disabled{opacity:.55;cursor:default}
+  .pill-btn svg{width:14px;height:14px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .pill-btn.on{
+    background:linear-gradient(135deg,rgba(157,255,198,.2),rgba(87,217,154,.16));
+    border-color:rgba(125,255,176,.42);color:#c9ffdf;
+    box-shadow:0 8px 24px rgba(80,210,145,.18);
+  }
+  .pill-btn.bgm-on{
+    background:linear-gradient(135deg,rgba(255,215,154,.18),rgba(255,171,94,.12));
+    border-color:rgba(255,207,138,.4);color:#ffe8c2;
+  }
+  .pill-btn .eq{
+    display:inline-flex;align-items:flex-end;gap:2px;height:11px;width:12px;justify-content:center;
+  }
+  .pill-btn .eq i{
+    display:block;width:2px;height:4px;border-radius:2px;background:currentColor;
+    transition:height .2s;
+  }
+  .pill-btn.bgm-on .eq i:nth-child(1){animation:eqBar 1.05s ease-in-out infinite}
+  .pill-btn.bgm-on .eq i:nth-child(2){animation:eqBar 0.85s ease-in-out .2s infinite}
+  .pill-btn.bgm-on .eq i:nth-child(3){animation:eqBar 1.2s ease-in-out .4s infinite}
+  @keyframes eqBar{
+    0%,100%{height:3px}
+    50%{height:11px}
+  }
+
+  /* ---------- 摄像头卡片（未开启时自动折叠隐藏，拯救视野） ---------- */
   .cam-card{
-    position:absolute;top:22px;right:26px;width:268px;
+    position:absolute;top:68px;right:26px;width:256px;
     background:var(--panel);border:1px solid var(--line);border-radius:18px;
     padding:12px;backdrop-filter:blur(16px) saturate(150%);
     -webkit-backdrop-filter:blur(16px) saturate(150%);
     box-shadow:0 18px 48px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.05);
-    transition:opacity .9s ease;
+    transform-origin:top right;
+    transition:opacity .38s ease,transform .38s cubic-bezier(.2,.85,.25,1),visibility .38s;
+  }
+  .cam-card.collapsed{
+    opacity:0;visibility:hidden;pointer-events:none;
+    transform:translateY(-10px) scale(.94);
   }
   .cam-head{
-    display:flex;align-items:center;justify-content:space-between;
-    font-size:11px;letter-spacing:.16em;text-transform:uppercase;
-    color:rgba(255,226,190,.55);margin:2px 2px 10px;
+    display:flex;align-items:center;justify-content:space-between;gap:8px;
+    font-size:11px;letter-spacing:.14em;
+    color:rgba(255,226,190,.6);margin:2px 2px 10px;
   }
+  .cam-head-right{display:flex;align-items:center;gap:8px}
+  .cam-close{
+    appearance:none;border:none;background:rgba(255,255,255,.06);color:rgba(255,226,190,.7);
+    width:22px;height:22px;border-radius:50%;cursor:pointer;display:grid;place-items:center;
+    font-size:13px;line-height:1;transition:background .2s,color .2s;
+  }
+  .cam-close:hover{background:rgba(255,207,138,.2);color:#fff}
   .dot{
     width:7px;height:7px;border-radius:50%;background:#5a5f6e;
     box-shadow:0 0 0 0 rgba(255,160,90,.5);transition:background .3s;
@@ -172,12 +233,12 @@
     box-shadow:0 0 10px rgba(255,180,90,.65);
   }
 
-  /* ---------- 仪式动作面板 ---------- */
+  /* ---------- 仪式动作面板（底部唯一视觉重心） ---------- */
   .ritual{
-    position:absolute;left:50%;bottom:112px;transform:translateX(-50%);
+    position:absolute;left:50%;bottom:28px;transform:translateX(-50%);
     display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;
-    padding:10px 16px;border-radius:20px;
-    max-width:min(780px,calc(100vw - 32px));min-height:56px;
+    padding:11px 18px;border-radius:999px;
+    max-width:min(760px,calc(100vw - 32px));min-height:56px;
     background:var(--panel);border:1px solid var(--line);
     backdrop-filter:blur(16px) saturate(150%);
     -webkit-backdrop-filter:blur(16px) saturate(150%);
@@ -216,18 +277,40 @@
     background:#ffcf8a;box-shadow:0 0 8px rgba(255,180,90,.65);
   }
 
-  /* ---------- 底部控制条 ---------- */
-  .controls{
-    position:absolute;left:50%;bottom:30px;transform:translateX(-50%);
-    display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;
-    padding:9px;border-radius:999px;
+  /* ---------- 右下角折叠视角工具（收起次要调试按钮，保持画面纯粹） ---------- */
+  .scene-tools{
+    position:absolute;right:26px;bottom:28px;z-index:4;
+    display:flex;flex-direction:column;align-items:flex-end;gap:8px;
+    transition:opacity .9s ease;
+  }
+  .scene-menu{
+    display:flex;flex-direction:column;gap:6px;padding:8px;border-radius:16px;
     background:var(--panel);border:1px solid var(--line);
     backdrop-filter:blur(16px) saturate(150%);
     -webkit-backdrop-filter:blur(16px) saturate(150%);
-    box-shadow:0 16px 40px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.05);
-    max-width:calc(100vw - 32px);
-    transition:opacity .9s ease;
+    box-shadow:0 14px 36px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.05);
+    opacity:0;visibility:hidden;pointer-events:none;
+    transform:translateY(8px) scale(.95);transform-origin:bottom right;
+    transition:opacity .24s ease,transform .24s cubic-bezier(.2,.85,.25,1),visibility .24s;
   }
+  .scene-tools.open .scene-menu{
+    opacity:1;visibility:visible;pointer-events:auto;
+    transform:translateY(0) scale(1);
+  }
+  .scene-menu .btn{font-size:12px;padding:7px 14px;text-align:center}
+  .fab-btn{
+    appearance:none;width:40px;height:40px;border-radius:50%;cursor:pointer;
+    display:grid;place-items:center;
+    background:var(--panel);border:1px solid var(--line);color:rgba(255,226,190,.72);
+    backdrop-filter:blur(16px) saturate(150%);
+    -webkit-backdrop-filter:blur(16px) saturate(150%);
+    box-shadow:0 10px 26px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.05);
+    transition:background .2s,border-color .2s,color .2s,transform .2s;
+  }
+  .fab-btn:hover{background:rgba(255,214,160,.14);border-color:rgba(255,207,138,.42);color:#ffeacb}
+  .scene-tools.open .fab-btn{border-color:rgba(255,207,138,.48);color:#ffcf8a;transform:rotate(45deg)}
+  .fab-btn svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
   .btn{
     appearance:none;border:1px solid rgba(255,207,138,.22);
     background:rgba(255,214,160,.06);color:#ffeacb;
@@ -249,14 +332,93 @@
   .btn:disabled{opacity:.5;cursor:default}
 
   .hint{
-    position:absolute;left:50%;bottom:84px;transform:translateX(-50%);
+    position:absolute;left:50%;bottom:96px;transform:translateX(-50%);
     font-size:11.5px;letter-spacing:.1em;color:rgba(255,226,190,.36);
     pointer-events:none;text-align:center;white-space:nowrap;
     transition:opacity .9s ease;
   }
+  /* 默认隐藏 FPS 调试信息（按 Shift+D 或加 ?debug=1 可呼出） */
   .fps{
+    display:none;
     position:absolute;left:26px;bottom:26px;font-size:11px;letter-spacing:.14em;
     color:rgba(255,226,190,.34);font-variant-numeric:tabular-nums;pointer-events:none;
+  }
+  .fps.show{display:block}
+
+  /* ---------- 轻提示 Toast（摄像头折叠时的状态轻提示） ---------- */
+  .toast{
+    position:fixed;left:50%;top:82px;z-index:6;pointer-events:none;
+    transform:translate(-50%,-8px) scale(.96);
+    padding:8px 16px;border-radius:999px;max-width:calc(100vw - 32px);
+    background:rgba(18,16,14,.82);border:1px solid rgba(255,207,138,.28);
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    color:#ffe8c5;font-size:12px;letter-spacing:.04em;text-align:center;
+    box-shadow:0 12px 32px rgba(0,0,0,.48);
+    opacity:0;transition:opacity .35s ease,transform .35s ease;
+  }
+  .toast.show{opacity:1;transform:translate(-50%,0) scale(1)}
+
+  /* ---------- 开场惊喜封面（解锁音频 + 仪式开场） ---------- */
+  .intro{
+    position:fixed;inset:0;z-index:8;
+    display:flex;align-items:center;justify-content:center;padding:24px;
+    background:
+      radial-gradient(ellipse 68% 60% at 50% 46%,rgba(14,12,18,.38),rgba(5,6,11,.84) 78%),
+      rgba(6,7,12,.38);
+    backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);
+    transition:opacity .85s ease,visibility .85s ease;
+  }
+  .intro.hide{opacity:0;visibility:hidden;pointer-events:none}
+  .intro-card{
+    text-align:center;max-width:440px;padding:36px 28px 32px;border-radius:28px;
+    background:linear-gradient(160deg,rgba(24,20,16,.66),rgba(10,10,16,.76));
+    border:1px solid rgba(255,207,138,.22);
+    backdrop-filter:blur(18px) saturate(150%);
+    -webkit-backdrop-filter:blur(18px) saturate(150%);
+    box-shadow:0 36px 90px rgba(0,0,0,.62),inset 0 1px 0 rgba(255,255,255,.08);
+    transform:translateY(0) scale(1);
+    transition:transform .85s cubic-bezier(.2,.85,.25,1),opacity .7s ease;
+  }
+  .intro.hide .intro-card{transform:translateY(-16px) scale(.96);opacity:0}
+  .intro-kicker{
+    font-size:11px;letter-spacing:.4em;text-transform:uppercase;
+    color:rgba(255,214,160,.68);margin-bottom:14px;
+  }
+  .intro-title{
+    margin:0;font-size:clamp(24px,5vw,32px);font-weight:500;letter-spacing:.08em;line-height:1.35;
+    font-family:"Songti SC","STSong",Georgia,"PingFang SC",serif;
+    background:linear-gradient(100deg,#fff6e5,#ffd392 52%,#ffab7a);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    filter:drop-shadow(0 0 24px rgba(255,176,94,.32));
+  }
+  .intro-desc{
+    margin:14px auto 26px;font-size:13px;line-height:1.8;letter-spacing:.04em;
+    color:rgba(255,234,210,.72);max-width:320px;
+  }
+  .intro-btn{
+    appearance:none;border:none;cursor:pointer;font:inherit;font-size:14.5px;font-weight:600;
+    letter-spacing:.08em;padding:14px 36px;border-radius:999px;color:#2a1708;
+    background:linear-gradient(135deg,#ffe2b3,#ffac5e);
+    box-shadow:0 12px 34px rgba(255,160,80,.42);
+    animation:btnGlow 2.4s ease-in-out infinite;
+    transition:transform .16s ease,filter .2s ease;
+  }
+  .intro-btn:hover{transform:translateY(-1px) scale(1.03);filter:brightness(1.04)}
+  .intro-btn:active{transform:scale(.97)}
+  .intro-sub{
+    margin-top:16px;font-size:11px;letter-spacing:.1em;color:rgba(255,226,190,.38);
+  }
+
+  /* 开场封面打开时，隐匿主界面控件，只留背后旋转的星光蛋糕剪影 */
+  body.intro-open .brand,
+  body.intro-open .stepper,
+  body.intro-open .top-tools,
+  body.intro-open .cam-card,
+  body.intro-open .ritual,
+  body.intro-open .scene-tools,
+  body.intro-open .hint{
+    opacity:0 !important;
+    pointer-events:none !important;
   }
 
   /* ---------- 悬停照片时的 caption 胶囊 ---------- */
@@ -329,7 +491,8 @@
   }
   .gift-mask.show{opacity:1}
 
-  body.celebrating .controls,
+  body.celebrating .top-tools,
+  body.celebrating .scene-tools,
   body.celebrating .hint,
   body.celebrating .ritual,
   body.celebrating .cam-card{opacity:.12;pointer-events:none}
@@ -337,7 +500,7 @@
 
   /* ---------- 启动遮罩 ---------- */
   .boot{
-    position:fixed;inset:0;z-index:9;display:flex;flex-direction:column;gap:14px;
+    position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;gap:14px;
     align-items:center;justify-content:center;text-align:center;
     background:#06070c;color:#ffe4bd;font-size:14px;letter-spacing:.08em;
     transition:opacity .7s ease;
@@ -352,33 +515,40 @@
   @keyframes spin{to{transform:rotate(360deg)}}
 
   /* ---------- 响应式 ---------- */
-  /* 中等屏：6 步步骤条变宽，收紧面板与品牌，必要时自动换行 */
+  /* 中等屏：收紧面板与品牌，必要时步骤条自动换行 */
   @media (max-width:1180px){
     .brand h1{font-size:16px}
     .cam-card{width:220px}
-    .stepper{font-size:10.5px;gap:4px;padding:6px 12px}
+    .stepper{font-size:10.5px;gap:4px;padding:6px 12px;max-width:calc(100vw - 380px)}
+    body.cam-open .stepper{max-width:calc(100vw - 440px)}
     .step-div{display:none}
     .step i{width:16px;height:16px;font-size:9px}
   }
   @media (max-width:820px){
     .brand{top:14px;left:14px}
-    .brand h1{font-size:14px}
+    .brand h1{font-size:15px}
     .brand p{display:none}
+    .top-tools{top:12px;right:12px;gap:6px}
+    .pill-btn{padding:7px 11px;font-size:11px;gap:5px}
     .stepper{
-      top:40px;font-size:10px;padding:6px 10px;gap:4px;max-width:calc(100vw - 24px);
+      top:52px;font-size:10px;padding:6px 10px;gap:4px;max-width:calc(100vw - 24px);
     }
+    body.cam-open .stepper{max-width:calc(100vw - 24px)}
     .step i{width:15px;height:15px;font-size:9px}
     .step-div{width:8px}
-    .cam-card{top:150px;right:12px;width:160px;padding:8px;border-radius:15px}
+    .cam-card{top:106px;right:12px;width:164px;padding:8px;border-radius:15px}
     .cam-head{font-size:9.5px;margin-bottom:7px}
     .status{font-size:10.5px;padding:7px 9px;min-height:30px}
     .meters{display:none}
-    .ritual{bottom:104px;padding:9px 12px;gap:8px;min-height:50px;font-size:12px}
+    .ritual{bottom:20px;padding:10px 14px;gap:8px;min-height:50px;font-size:12px;border-radius:22px;max-width:calc(100vw - 74px)}
     .ritual-tip{display:none}
-    .controls{bottom:18px;gap:7px;padding:7px}
+    .scene-tools{right:12px;bottom:22px}
+    .fab-btn{width:38px;height:38px}
     .btn{font-size:12px;padding:8px 13px}
     .hint{display:none}
     .fps{left:14px;bottom:10px;font-size:10px}
+    .toast{top:96px;font-size:11.5px}
+    .intro-card{padding:30px 22px 26px;border-radius:24px}
     .gift-card{padding:26px 20px 20px;border-radius:22px}
     .gift-note{font-size:12.5px}
     .gift-btn{padding:13px 26px;font-size:13.5px}
@@ -387,24 +557,42 @@
     .cam-card{width:150px}
     .cam-stage{aspect-ratio:16/10}
     .status{display:none}
-    .ritual{bottom:96px}
+    .ritual{bottom:16px}
+    .scene-tools{bottom:18px}
     .gift-card{padding:24px 22px 18px}
   }
 </style>
 </head>
-<body>
+<body class="intro-open">
 
 <canvas id="scene"></canvas>
 <div class="vignette"></div>
 
 <div class="ui">
   <header class="brand">
-    <h1>手势控制 · 粒子生日蛋糕</h1>
-    <p>Three.js × MediaPipe Hands</p>
+    <h1 id="brand-title">Happy Birthday</h1>
+    <p id="brand-subtitle">愿这一刻的星光都属于你</p>
   </header>
 
   <!-- 步骤条：点燃 → 花束 → 比耶 → 点赞 → 许愿 → 吹灭 -->
   <div class="stepper" id="stepper"></div>
+
+  <!-- 右上角极简胶囊：音乐开关 + 手势控制 -->
+  <div class="top-tools">
+    <button id="btn-bgm" class="pill-btn" aria-label="开启或关闭背景音乐" title="背景音乐开关">
+      <span class="eq" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span id="bgm-label">音乐</span>
+    </button>
+    <button id="btn-cam" class="pill-btn" aria-label="开启或关闭手势识别" title="使用手势控制蛋糕">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M18 11V6a2 2 0 0 0-4 0v4"></path>
+        <path d="M14 10V4a2 2 0 0 0-4 0v6"></path>
+        <path d="M10 10.5V6a2 2 0 0 0-4 0v8"></path>
+        <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2a8 8 0 0 1-6.4-3.2L3.8 16a2 2 0 0 1 3.1-2.5L8 14.5"></path>
+      </svg>
+      <span id="cam-label">手势控制</span>
+    </button>
+  </div>
 
   <!-- 许愿反馈（点「愿你愿望成真！」后播放约 2.8 秒） -->
   <div class="wish-screen" id="wish-screen">
@@ -414,20 +602,24 @@
     <div class="wish-track"><i id="wish-bar"></i></div>
   </div>
 
-  <aside class="cam-card">
+  <!-- 手势预览卡片：默认折叠，开启摄像头时自动展开 -->
+  <aside class="cam-card collapsed" id="cam-card">
     <div class="cam-head">
       <span>手势识别</span>
-      <span id="cam-dot" class="dot"></span>
+      <div class="cam-head-right">
+        <span id="cam-dot" class="dot"></span>
+        <button id="cam-close" class="cam-close" aria-label="关闭摄像头" title="关闭手势识别">×</button>
+      </div>
     </div>
     <div class="cam-stage">
       <video id="input-video" playsinline muted autoplay></video>
       <canvas id="overlay-canvas" width="320" height="240"></canvas>
       <div id="cam-placeholder" class="cam-placeholder">
-        摄像头未开启
-        <span>鼠标模式可用</span>
+        正在准备摄像头…
+        <span>请允许浏览器访问镜头</span>
       </div>
     </div>
-    <div id="gesture-status" class="status">未开启摄像头 · 可用鼠标拖拽</div>
+    <div id="gesture-status" class="status">未开启摄像头 · 可直接点击互动</div>
     <div class="meters">
       <div class="meter"><span>张开度</span><div class="bar"><i id="bar-open"></i></div></div>
       <div class="meter"><span>捏合</span><div class="bar"><i id="bar-pinch"></i></div></div>
@@ -436,19 +628,41 @@
 
   <div class="ritual" id="ritual"></div>
 
-  <div class="controls">
-    <button id="btn-cam" class="btn primary" aria-label="开启或关闭摄像头">开启摄像头</button>
-    <button id="btn-scatter" class="btn" aria-label="让粒子扩散">扩散</button>
-    <button id="btn-gather" class="btn" aria-label="让粒子聚拢成蛋糕">聚拢</button>
-    <button id="btn-reset" class="btn ghost" aria-label="重置视角">重置视角</button>
+  <!-- 右下角极简折叠菜单：收起次要视角控制按钮 -->
+  <div class="scene-tools" id="scene-tools">
+    <div class="scene-menu" id="scene-menu" role="menu">
+      <button id="btn-scatter" class="btn" aria-label="让粒子扩散">扩散星空</button>
+      <button id="btn-gather" class="btn" aria-label="让粒子聚拢成蛋糕">聚拢形态</button>
+      <button id="btn-reset" class="btn ghost" aria-label="重置视角">重置视角</button>
+    </div>
+    <button id="btn-scene-toggle" class="fab-btn" aria-label="视角与粒子控制" title="视角与粒子控制" aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+    </button>
   </div>
 
   <div id="hint" class="hint">拖拽旋转 · 滚轮缩放 · 点击画面切换扩散 / 聚拢</div>
   <div id="fps" class="fps">-- FPS</div>
 </div>
 
+<!-- 轻提示（未展开摄像头面板时展示状态提示） -->
+<div class="toast" id="toast"></div>
+
 <!-- 悬停照片时的 caption 胶囊 -->
 <div class="photo-tip" id="photo-tip"></div>
+
+<!-- 开场惊喜封面：解锁音频并开启仪式 -->
+<div class="intro" id="intro">
+  <div class="intro-card">
+    <div class="intro-kicker" id="intro-kicker">✦ A Birthday Surprise ✦</div>
+    <h2 class="intro-title" id="intro-title">为你点亮这一刻的星光</h2>
+    <p class="intro-desc" id="intro-desc">戴上耳机效果更佳 · 跟着指引完成属于你的生日仪式</p>
+    <button class="intro-btn" id="btn-enter">✨ 开启生日惊喜</button>
+    <div class="intro-sub">支持点击互动，也可随时开启手势与吹蜡烛</div>
+  </div>
+</div>
 
 <!-- 吹灭蜡烛后：祝福卡片 -->
 <div class="gift-card" id="gift-card">
@@ -463,8 +677,8 @@
 
 <div id="boot" class="boot">
   <div class="ring"></div>
-  正在点亮蜡烛…
-  <span>LOADING THREE.JS</span>
+  正在点亮星光…
+  <span>PREPARING YOUR SURPRISE</span>
 </div>
 
 <script defer src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.js" crossorigin="anonymous"></script>
@@ -490,6 +704,18 @@
 </script>
 
 <script type="module">
+/* ============================================================================
+   ★★★  专属文案配置：可随时改成寿星的名字与祝福  ★★★
+   ========================================================================== */
+const SITE_BRAND = {
+  title: "Happy Birthday",
+  subtitle: "愿这一刻的星光都属于你",
+  introKicker: "✦ A Birthday Surprise ✦",
+  introTitle: "为你点亮这一刻的星光",
+  introDesc: "戴上耳机效果更佳 · 跟着指引完成属于你的生日仪式",
+  introBtn: "✨ 开启生日惊喜"
+};
+
 /* ============================================================================
    ★★★  贺卡地址：吹灭蜡烛后跳转到这里  ★★★
    ========================================================================== */
@@ -1774,12 +2000,321 @@ const photoTipEl = $('photo-tip');
 const wishScreenEl = $('wish-screen');
 const wishTextEl = $('wish-text');
 const wishBarEl = $('wish-bar');
+const camCardEl = $('cam-card');
+const camCloseBtn = $('cam-close');
+const camLabelEl = $('cam-label');
+const btnBgm = $('btn-bgm');
+const bgmLabelEl = $('bgm-label');
+const sceneToolsEl = $('scene-tools');
+const btnSceneToggle = $('btn-scene-toggle');
+const toastEl = $('toast');
+const introEl = $('intro');
+const btnEnter = $('btn-enter');
 
-function setStatus(text, active = false) {
-  if (statusEl.textContent === text) return;
-  statusEl.textContent = text;
-  statusEl.classList.toggle('active', active);
+// 应用顶部专属文案配置
+$('brand-title').textContent = SITE_BRAND.title;
+$('brand-subtitle').textContent = SITE_BRAND.subtitle;
+$('intro-kicker').textContent = SITE_BRAND.introKicker;
+$('intro-title').textContent = SITE_BRAND.introTitle;
+$('intro-desc').textContent = SITE_BRAND.introDesc;
+btnEnter.textContent = SITE_BRAND.introBtn;
+
+// FPS 调试显示：默认隐藏，URL 带 ?debug=1 或按 Shift+D 呼出
+if (new URLSearchParams(location.search).has('debug')) fpsEl.classList.add('show');
+
+let toastTimer = null;
+function showToast(text, duration = 2600) {
+  if (!toastEl || !text) return;
+  toastEl.textContent = text;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), duration);
 }
+
+function setStatus(text, active = false, toast = false) {
+  if (statusEl.textContent !== text) {
+    statusEl.textContent = text;
+    statusEl.classList.toggle('active', active);
+  }
+  if (toast && !cameraOn && !document.body.classList.contains('intro-open')) {
+    showToast(text);
+  }
+}
+
+/* ============================================================================
+   8.5 声音引擎（Web Audio 水晶八音盒《生日快乐》BGM + 仪式微音效）
+   独立 AudioContext，绝不与麦克风吹气检测冲突；麦克风开启时自动压低音量
+   ========================================================================== */
+const SoundEngine = (() => {
+  let ctx = null;
+  let master = null;
+  let bgmGain = null;
+  let sfxGain = null;
+  let delayIn = null;
+
+  let enabled = false;
+  let userMuted = false;
+  let ducked = false;
+  let hiddenPaused = false;
+  let loopTimer = null;
+  let noteIdx = 0;
+
+  // F 大调 3/4 拍《生日快乐》八音盒谱：[主音 Hz, 拍数, 柔和和弦数组(可选)]
+  const N = {
+    Bb2: 116.54, C3: 130.81, F3: 174.61, G3: 196.00, A3: 220.00,
+    C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, G4: 392.00, A4: 440.00, Bb4: 466.16,
+    C5: 523.25, D5: 587.33, E5: 659.25, F5: 698.46, G5: 783.99, A5: 880.00, Bb5: 932.33,
+    C6: 1046.50
+  };
+  const BEAT = 0.62;
+  const SCORE = [
+    // Phrase 1: Happy birthday to you
+    [N.C5, 0.65], [N.C5, 0.35],
+    [N.D5, 1.0, [N.F3, N.C4, N.A4]], [N.C5, 1.0], [N.F5, 1.0],
+    [N.E5, 2.0, [N.C3, N.G3, N.Bb4]], [0, 0.25],
+    // Phrase 2: Happy birthday to you
+    [N.C5, 0.65], [N.C5, 0.35],
+    [N.D5, 1.0, [N.C3, N.G3, N.E4]], [N.C5, 1.0], [N.G5, 1.0],
+    [N.F5, 2.0, [N.F3, N.C4, N.A4]], [0, 0.25],
+    // Phrase 3: Happy birthday dear friend
+    [N.C5, 0.65], [N.C5, 0.35],
+    [N.C6, 1.0, [N.F3, N.A3, N.C4]], [N.A5, 1.0], [N.F5, 1.0],
+    [N.E5, 1.0, [N.Bb2, N.F3, N.D4]], [N.D5, 1.8], [0, 0.25],
+    // Phrase 4: Happy birthday to you
+    [N.Bb5, 0.65], [N.Bb5, 0.35],
+    [N.A5, 1.0, [N.C3, N.A3, N.F4]], [N.F5, 1.0], [N.G5, 1.0, [N.C3, N.G3, N.E4]],
+    [N.F5, 2.6, [N.F3, N.C4, N.A4]], [0, 1.4]
+  ];
+
+  function ensure() {
+    if (ctx) {
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+      return ctx;
+    }
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    ctx = new AC();
+
+    master = ctx.createGain();
+    master.gain.value = 0.85;
+    master.connect(ctx.destination);
+
+    bgmGain = ctx.createGain();
+    bgmGain.gain.value = 0.0001;
+    bgmGain.connect(master);
+
+    sfxGain = ctx.createGain();
+    sfxGain.gain.value = 0.42;
+    sfxGain.connect(master);
+
+    // 柔和星空回声总线（温润尾音，不刺耳）
+    delayIn = ctx.createGain();
+    delayIn.gain.value = 0.34;
+    const delay = ctx.createDelay(1.0);
+    delay.delayTime.value = 0.36;
+    const fb = ctx.createGain();
+    fb.gain.value = 0.32;
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 2400;
+
+    delayIn.connect(delay);
+    delay.connect(lp);
+    lp.connect(fb);
+    fb.connect(delay);
+    lp.connect(master);
+
+    return ctx;
+  }
+
+  function updateBgmVolume(fadeSec = 0.6) {
+    if (!ctx || !bgmGain) return;
+    const target = (enabled && !userMuted && !hiddenPaused) ? (ducked ? 0.14 : 0.34) : 0.0001;
+    const now = ctx.currentTime;
+    bgmGain.gain.cancelScheduledValues(now);
+    bgmGain.gain.setTargetAtTime(target, now, Math.max(0.06, fadeSec / 3));
+  }
+
+  function syncBtn() {
+    const active = enabled && !userMuted;
+    btnBgm.classList.toggle('bgm-on', active);
+    bgmLabelEl.textContent = active ? '音乐中' : '已静音';
+  }
+
+  /** 单个八音盒音符（基音正弦 + 轻柔高八度泛音） */
+  function playBell(freq, dur, vol = 0.24, dest = bgmGain, delayOffset = 0) {
+    if (!ctx || !freq) return;
+    const t0 = ctx.currentTime + delayOffset;
+
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const g = ctx.createGain();
+    const g2 = ctx.createGain();
+
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(freq, t0);
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(freq * 2, t0);
+    g2.gain.value = 0.14;
+
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.linearRampToValueAtTime(vol, t0 + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0008, t0 + Math.max(0.45, dur * 1.65));
+
+    osc1.connect(g);
+    osc2.connect(g2);
+    g2.connect(g);
+    g.connect(dest);
+    if (dest === bgmGain || dest === sfxGain) g.connect(delayIn);
+
+    const stopAt = t0 + Math.max(0.55, dur * 1.75);
+    osc1.start(t0);
+    osc2.start(t0);
+    osc1.stop(stopAt);
+    osc2.stop(stopAt);
+  }
+
+  /** 极柔和低音和弦铺底 */
+  function playPad(freqs, dur) {
+    if (!ctx || !freqs) return;
+    const t0 = ctx.currentTime;
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 900;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.linearRampToValueAtTime(0.065, t0 + 0.14);
+    g.gain.exponentialRampToValueAtTime(0.0008, t0 + dur * 1.35);
+    lp.connect(g);
+    g.connect(bgmGain);
+
+    for (const f of freqs) {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(f, t0);
+      osc.connect(lp);
+      osc.start(t0);
+      osc.stop(t0 + dur * 1.45);
+    }
+  }
+
+  function scheduleNext() {
+    if (!enabled || userMuted || hiddenPaused) return;
+    const [freq, beats, chord] = SCORE[noteIdx];
+    const dur = beats * BEAT;
+    if (freq > 0) playBell(freq, dur, 0.25, bgmGain, 0);
+    if (chord) playPad(chord, Math.max(dur * 2.2, 1.4));
+    noteIdx = (noteIdx + 1) % SCORE.length;
+    loopTimer = setTimeout(scheduleNext, dur * 1000);
+  }
+
+  function startBgm() {
+    const c = ensure();
+    if (!c) return;
+    enabled = true;
+    userMuted = false;
+    syncBtn();
+    updateBgmVolume(0.9);
+    if (!loopTimer) {
+      noteIdx = 0;
+      loopTimer = setTimeout(scheduleNext, 350);
+    }
+  }
+
+  function toggleBgm() {
+    ensure();
+    if (!enabled) {
+      startBgm();
+      return;
+    }
+    userMuted = !userMuted;
+    syncBtn();
+    updateBgmVolume(0.35);
+    clearTimeout(loopTimer);
+    loopTimer = null;
+    if (!userMuted && !hiddenPaused) {
+      loopTimer = setTimeout(scheduleNext, 180);
+    }
+  }
+
+  function setDuck(on) {
+    ducked = !!on;
+    updateBgmVolume(0.5);
+  }
+
+  function setHidden(hidden) {
+    hiddenPaused = !!hidden;
+    clearTimeout(loopTimer);
+    loopTimer = null;
+    updateBgmVolume(0.25);
+    if (!hidden && enabled && !userMuted) {
+      loopTimer = setTimeout(scheduleNext, 300);
+    }
+  }
+
+  function canSfx() {
+    if (userMuted || hiddenPaused) return false;
+    return !!ensure();
+  }
+
+  /** 柔和噪声呼气/火花音 */
+  function playBreath(dur = 0.55, freq = 950, vol = 0.14) {
+    if (!ctx) return;
+    const len = Math.floor(ctx.sampleRate * dur);
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.setValueAtTime(freq, ctx.currentTime);
+    bp.Q.value = 1.4;
+
+    const g = ctx.createGain();
+    const t0 = ctx.currentTime;
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.linearRampToValueAtTime(vol, t0 + dur * 0.18);
+    g.gain.exponentialRampToValueAtTime(0.0008, t0 + dur);
+
+    src.connect(bp);
+    bp.connect(g);
+    g.connect(sfxGain);
+    src.start(t0);
+    src.stop(t0 + dur + 0.05);
+  }
+
+  function arpeggio(freqs, step = 0.075, vol = 0.2, dur = 0.9) {
+    if (!canSfx()) return;
+    freqs.forEach((f, i) => playBell(f, dur, vol, sfxGain, i * step));
+  }
+
+  syncBtn();
+  return {
+    startBgm,
+    toggleBgm,
+    setDuck,
+    setHidden,
+    isPlaying: () => enabled && !userMuted,
+    sfxIntro: () => arpeggio([N.F4, N.A4, N.C5, N.F5, N.A5], 0.085, 0.22, 1.3),
+    sfxIgnite: () => {
+      if (!canSfx()) return;
+      playBreath(0.24, 1500, 0.09);
+      arpeggio([N.C5, N.F5, N.A5], 0.07, 0.2, 0.85);
+    },
+    sfxBouquet: () => arpeggio([N.F4, N.A4, N.C5, N.E5, N.G5, N.A5], 0.075, 0.19, 1.1),
+    sfxPhotos: () => arpeggio([N.C5, N.E5, N.G5, N.A5, N.C6], 0.065, 0.17, 1.15),
+    sfxPhotoClick: () => arpeggio([N.A5, N.C6], 0.045, 0.12, 0.45),
+    sfxGather: () => arpeggio([N.A5, N.F5, N.C5, N.F4 * 2], 0.08, 0.18, 0.95),
+    sfxWish: () => arpeggio([N.F5, N.A5, N.C6, N.F5 * 2], 0.12, 0.21, 1.8),
+    sfxBlow: () => {
+      if (!canSfx()) return;
+      playBreath(0.65, 680, 0.16);
+      arpeggio([N.F4, N.C5, N.F5, N.A5, N.C6], 0.09, 0.22, 1.7);
+    }
+  };
+})();
 
 /* ============================================================================
    9. 指针交互
@@ -1859,10 +2394,12 @@ function endDrag(e) {
     // 点照片 → 特写 / 再点同一张或点空白 → 归位
     if (card) {
       focusedCard = (focusedCard === card) ? null : card;
+      SoundEngine.sfxPhotoClick();
       return;
     }
     if (focusedCard) {
       focusedCard = null;
+      SoundEngine.sfxPhotoClick();
       return;
     }
 
@@ -1880,9 +2417,31 @@ canvas.addEventListener('wheel', e => {
   state.distTarget = clamp(state.distTarget * (1 + Math.sign(e.deltaY) * 0.085), 3.4, 9.6);
 }, { passive: false });
 
-// Esc 退出照片特写
+// Esc 退出照片特写 / Shift+D 切换左下角 FPS 调试显示
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && focusedCard) focusedCard = null;
+  if (e.key === 'Escape') {
+    if (focusedCard) focusedCard = null;
+    if (sceneToolsEl.classList.contains('open')) {
+      sceneToolsEl.classList.remove('open');
+      btnSceneToggle.setAttribute('aria-expanded', 'false');
+    }
+  }
+  if (e.shiftKey && (e.key === 'D' || e.key === 'd')) {
+    fpsEl.classList.toggle('show');
+  }
+});
+
+// 右下角折叠视角工具菜单
+btnSceneToggle.addEventListener('click', e => {
+  e.stopPropagation();
+  const open = sceneToolsEl.classList.toggle('open');
+  btnSceneToggle.setAttribute('aria-expanded', String(open));
+});
+document.addEventListener('click', e => {
+  if (sceneToolsEl.classList.contains('open') && !sceneToolsEl.contains(e.target)) {
+    sceneToolsEl.classList.remove('open');
+    btnSceneToggle.setAttribute('aria-expanded', 'false');
+  }
 });
 
 $('btn-scatter').addEventListener('click', () => { state.spreadTarget = 1; });
@@ -1919,12 +2478,14 @@ const HAND_CONNECTIONS = [
 ];
 
 function setCamUI(on) {
-  btnCam.textContent = on ? '关闭摄像头' : '开启摄像头';
+  camLabelEl.textContent = on ? '关闭手势' : '手势控制';
   btnCam.classList.toggle('on', on);
+  camCardEl.classList.toggle('collapsed', !on);
+  document.body.classList.toggle('cam-open', on);
   dotEl.className = 'dot' + (on ? ' live' : '');
   camPlaceholder.style.display = on ? 'none' : 'flex';
   hintEl.textContent = on
-    ? '☝🏻 变花束 · ✌🏻 散星空 · 👍🏻 回蛋糕 · 🙏🏻 许愿'
+    ? '☝🏻 变花束 · ✌🏻 散星空 · 👍🏻 回蛋糕 · 🌬️ 吹灭蜡烛'
     : '拖拽旋转 · 滚轮缩放 · 点击画面切换扩散 / 聚拢';
 }
 
@@ -1939,6 +2500,8 @@ async function waitForHands(timeout = 12000) {
 async function startCamera() {
   if (cameraOn) return;
   btnCam.disabled = true;
+  camCardEl.classList.remove('collapsed');
+  document.body.classList.add('cam-open');
   setStatus('正在启动摄像头…');
   dotEl.className = 'dot wait';
 
@@ -1976,9 +2539,9 @@ async function startCamera() {
   } catch (err) {
     console.warn('[camera]', err);
     const msg = err && err.message ? err.message : String(err);
-    setStatus('摄像头不可用：' + msg + ' · 已切换到鼠标模式');
     dotEl.className = 'dot';
     stopCamera(true);
+    setStatus('摄像头不可用（' + msg + '）· 可直接点击完成仪式', false, true);
   } finally {
     btnCam.disabled = false;
   }
@@ -1997,7 +2560,7 @@ function stopCamera(silent = false) {
   gesture.pinch = 0;
   setCamUI(false);
   dotEl.className = 'dot';
-  if (!silent) setStatus('摄像头已关闭 · 鼠标模式可用');
+  if (!silent) setStatus('已关闭手势识别 · 可继续点击互动', false, true);
 }
 
 async function pump() {
@@ -2017,6 +2580,10 @@ async function pump() {
 btnCam.addEventListener('click', () => {
   if (cameraOn) stopCamera();
   else startCamera();
+});
+camCloseBtn.addEventListener('click', () => {
+  if (cameraOn) stopCamera();
+  else setCamUI(false);
 });
 
 function onHandResults(results) {
@@ -2431,6 +2998,7 @@ function igniteCandle(source) {
   ritual.smoke = 0;
   ritual.holdPinch = 0;
   ritual.holdFinger = 0;
+  SoundEngine.sfxIgnite();
   setStatus(`蜡烛已点燃（${source}）· 比个 1 ☝🏻 变出花束`, true);
   syncRitualUI();
 }
@@ -2451,6 +3019,7 @@ function bouquetMorph(source) {
   state.viewPitchTarget = 0.14;
   state.autoSpeed = 0.7;
 
+  SoundEngine.sfxBouquet();
   setStatus(`花束成型 🌷（${source}）· 比个耶 ✌🏻 让它散成星空`, true);
   syncRitualUI();
 }
@@ -2477,6 +3046,7 @@ function posePhotos(source) {
   photoGroup.visible = true;
   photos.forEach((c, i) => { c.appearAt = i * 0.12; });
 
+  SoundEngine.sfxPhotos();
   setStatus(`比耶成功 ✌🏻 回忆星环展开 · 比个赞 👍🏻 回到蛋糕`, true);
   syncRitualUI();
 }
@@ -2500,6 +3070,7 @@ function gatherBack(source) {
   photoTipEl.classList.remove('show');
   canvas.style.cursor = 'grab';
 
+  SoundEngine.sfxGather();
   setStatus(`点赞成功 👍🏻 蛋糕回来了（${source}）· 闭上眼睛，许个愿吧`, true);
   syncRitualUI();
 }
@@ -2520,6 +3091,7 @@ function startWish(source) {
   if (wishTextEl) wishTextEl.textContent = '愿望已被星光收藏 ✨';
   wishBarEl.style.width = '0%';
 
+  SoundEngine.sfxWish();
   setStatus(`许愿中（${source}）· 闭上眼睛，默念你的心愿`, true);
   syncRitualUI();
 }
@@ -2545,7 +3117,8 @@ function finishWish() {
   setStatus('愿望已封存 ✨ 现在可以吹灭蜡烛了', true);
   syncRitualUI();
 
-  // 进入吹灭环节：自动尝试开启麦克风（被拒绝也不影响按钮兜底）
+  // 进入吹灭环节：自动尝试开启麦克风并柔和压低 BGM，避免干扰收音
+  SoundEngine.setDuck(true);
   enableMic();
 }
 
@@ -2562,6 +3135,8 @@ function blowOut(source) {
   ritual.wishTarget = 0;
   ritual.air = 0;
   stopMic();
+  SoundEngine.setDuck(false);
+  SoundEngine.sfxBlow();
 
   // 兜底：确保许愿光环已彻底隐藏（正常流程在 finishWish 里已清）
   for (const ring of wishRings) {
@@ -2662,10 +3237,9 @@ function syncRitualUI() {
 }
 
 function layoutRitual() {
-  const controlsTop = document.querySelector('.controls').getBoundingClientRect().top;
-  const ritualBottom = window.innerHeight - controlsTop + 10;
-  ritualEl.style.bottom = Math.max(10, ritualBottom) + 'px';
-  hintEl.style.bottom = (ritualBottom + ritualEl.offsetHeight + 10) + 'px';
+  const ritualBottom = window.innerWidth <= 820 ? 20 : 28;
+  ritualEl.style.bottom = ritualBottom + 'px';
+  hintEl.style.bottom = (ritualBottom + ritualEl.offsetHeight + 12) + 'px';
 }
 window.addEventListener('resize', layoutRitual);
 
@@ -2679,7 +3253,7 @@ ritualEl.addEventListener('click', e => {
     case 'gather':  gatherBack('按钮'); break;
     case 'wish':    startWish('按钮'); break;
     case 'blow':    blowOut('按钮'); break;
-    case 'mic':     enableMic(); break;
+    case 'mic':     SoundEngine.setDuck(true); enableMic(); break;
   }
 });
 
@@ -2986,8 +3560,29 @@ function animate() {
 }
 
 /* ============================================================================
-   16. 启动
+   16. 开场封面 & 启动
    ========================================================================== */
+let entered = false;
+function enterExperience() {
+  if (entered) return;
+  entered = true;
+  document.body.classList.remove('intro-open');
+  introEl.classList.add('hide');
+  setTimeout(() => { introEl.style.display = 'none'; }, 900);
+  SoundEngine.sfxIntro();
+  SoundEngine.startBgm();
+  requestAnimationFrame(layoutRitual);
+}
+
+btnEnter.addEventListener('click', enterExperience);
+btnBgm.addEventListener('click', () => SoundEngine.toggleBgm());
+document.addEventListener('keydown', e => {
+  if (!entered && (e.key === 'Enter' || e.key === ' ')) {
+    e.preventDefault();
+    enterExperience();
+  }
+});
+
 setCamUI(false);
 syncRitualUI();
 animate();
@@ -3005,8 +3600,8 @@ window.addEventListener('pointerdown', () => {
 
 window.__cakeDebug = {
   ritual, state, gesture, renderer, camera, analyzeHand, onHandResults,
-  CARD_URL, MEMORY_PHOTOS, photoGroup, photos,
-  igniteCandle, bouquetMorph, posePhotos, gatherBack, startWish, finishWish, blowOut,
+  SITE_BRAND, CARD_URL, MEMORY_PHOTOS, photoGroup, photos, SoundEngine,
+  enterExperience, igniteCandle, bouquetMorph, posePhotos, gatherBack, startWish, finishWish, blowOut,
   enableMic, detectBlow, classifyBlow, MIC,
   bouquetTargets, wishRings,
   focusCard: i => { focusedCard = (i === null || i === undefined) ? null : photos[i]; return focusedCard ? focusedCard.index : null; },
@@ -3022,6 +3617,7 @@ requestAnimationFrame(() => {
 });
 
 document.addEventListener('visibilitychange', () => {
+  SoundEngine.setHidden(document.hidden);
   if (document.hidden) {
     if (cameraOn) stopCamera();
     if (micOn) stopMic();
