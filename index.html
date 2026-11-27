@@ -118,7 +118,7 @@
     box-shadow:0 0 12px rgba(255,190,110,.85);
   }
 
-  /* ---------- 右上角极简工具胶囊（音乐 + 手势） ---------- */
+  /* ---------- 右上角极简音效开关 ---------- */
   .top-tools{
     position:absolute;top:22px;right:26px;z-index:4;
     display:flex;align-items:center;gap:8px;
@@ -138,29 +138,11 @@
   .pill-btn:active{transform:scale(.96)}
   .pill-btn:disabled{opacity:.55;cursor:default}
   .pill-btn svg{width:14px;height:14px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-  .pill-btn.on{
-    background:linear-gradient(135deg,rgba(157,255,198,.2),rgba(87,217,154,.16));
-    border-color:rgba(125,255,176,.42);color:#c9ffdf;
-    box-shadow:0 8px 24px rgba(80,210,145,.18);
+  .pill-btn.sfx-on{
+    background:linear-gradient(135deg,rgba(255,215,154,.14),rgba(255,171,94,.08));
+    border-color:rgba(255,207,138,.34);color:#ffe8c2;
   }
-  .pill-btn.bgm-on{
-    background:linear-gradient(135deg,rgba(255,215,154,.18),rgba(255,171,94,.12));
-    border-color:rgba(255,207,138,.4);color:#ffe8c2;
-  }
-  .pill-btn .eq{
-    display:inline-flex;align-items:flex-end;gap:2px;height:11px;width:12px;justify-content:center;
-  }
-  .pill-btn .eq i{
-    display:block;width:2px;height:4px;border-radius:2px;background:currentColor;
-    transition:height .2s;
-  }
-  .pill-btn.bgm-on .eq i:nth-child(1){animation:eqBar 1.05s ease-in-out infinite}
-  .pill-btn.bgm-on .eq i:nth-child(2){animation:eqBar 0.85s ease-in-out .2s infinite}
-  .pill-btn.bgm-on .eq i:nth-child(3){animation:eqBar 1.2s ease-in-out .4s infinite}
-  @keyframes eqBar{
-    0%,100%{height:3px}
-    50%{height:11px}
-  }
+  .pill-btn.muted{color:rgba(255,226,190,.46);border-color:rgba(255,207,138,.12)}
 
   /* ---------- 摄像头卡片（未开启时自动折叠隐藏，拯救视野） ---------- */
   .cam-card{
@@ -233,18 +215,67 @@
     box-shadow:0 0 10px rgba(255,180,90,.65);
   }
 
-  /* ---------- 仪式动作面板（底部唯一视觉重心） ---------- */
+  /* ---------- 底部居中区（提示语 + 主仪式胶囊 + 醒目手势开启提醒） ---------- */
+  .bottom-dock{
+    position:absolute;left:50%;bottom:20px;transform:translateX(-50%);
+    display:flex;flex-direction:column;align-items:center;gap:9px;
+    max-width:min(780px,calc(100vw - 32px));
+    pointer-events:none;
+    transition:opacity .9s ease;
+  }
+  .bottom-dock > *{pointer-events:auto}
+
+  /* ---------- 仪式动作面板（底部视觉重心） ---------- */
   .ritual{
-    position:absolute;left:50%;bottom:28px;transform:translateX(-50%);
     display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;
     padding:11px 18px;border-radius:999px;
-    max-width:min(760px,calc(100vw - 32px));min-height:56px;
+    max-width:100%;min-height:56px;
     background:var(--panel);border:1px solid var(--line);
     backdrop-filter:blur(16px) saturate(150%);
     -webkit-backdrop-filter:blur(16px) saturate(150%);
     box-shadow:0 16px 44px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.05);
     transition:opacity .45s ease,transform .45s ease;
     font-size:13px;
+  }
+
+  /* ---------- 底部醒目手势开启提醒胶囊 ---------- */
+  .cam-dock-btn{
+    appearance:none;display:inline-flex;align-items:center;gap:8px;
+    padding:8px 18px;border-radius:999px;cursor:pointer;
+    background:linear-gradient(135deg,rgba(255,214,154,.14),rgba(20,16,12,.72));
+    border:1px solid rgba(255,207,138,.36);color:#ffe7c2;
+    font:inherit;font-size:12.5px;letter-spacing:.05em;white-space:nowrap;
+    backdrop-filter:blur(16px) saturate(150%);
+    -webkit-backdrop-filter:blur(16px) saturate(150%);
+    box-shadow:0 10px 28px rgba(0,0,0,.42),0 0 18px rgba(255,180,90,.12),inset 0 1px 0 rgba(255,255,255,.06);
+    transition:background .22s,border-color .22s,color .22s,transform .12s,box-shadow .22s;
+  }
+  .cam-dock-btn:hover{
+    background:linear-gradient(135deg,rgba(255,214,154,.24),rgba(28,22,15,.82));
+    border-color:rgba(255,214,154,.62);
+    box-shadow:0 10px 30px rgba(0,0,0,.48),0 0 24px rgba(255,180,90,.24);
+    transform:translateY(-1px);
+  }
+  .cam-dock-btn:active{transform:scale(.97)}
+  .cam-dock-btn:disabled{opacity:.55;cursor:default}
+  .cam-dock-btn svg{width:15px;height:15px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .cam-dock-btn .cam-pulse{
+    width:7px;height:7px;border-radius:50%;background:#ffcf8a;flex:none;
+    box-shadow:0 0 8px rgba(255,207,138,.8);
+    animation:camHintPulse 2s ease-in-out infinite;
+  }
+  .cam-dock-btn.on{
+    background:linear-gradient(135deg,rgba(157,255,198,.18),rgba(14,32,24,.78));
+    border-color:rgba(125,255,176,.46);color:#c9ffdf;
+    box-shadow:0 10px 26px rgba(60,190,125,.2);
+  }
+  .cam-dock-btn.on .cam-pulse{
+    background:#7dffb0;box-shadow:0 0 10px rgba(125,255,176,.9);
+    animation:pulse 1.6s infinite;
+  }
+  @keyframes camHintPulse{
+    0%,100%{box-shadow:0 0 0 0 rgba(255,207,138,.6)}
+    50%{box-shadow:0 0 0 6px rgba(255,207,138,0)}
   }
   .ritual-label{font-size:12.5px;letter-spacing:.06em;color:#ffe4bd;white-space:nowrap}
   .ritual-tip{font-size:11px;color:rgba(255,226,190,.4);white-space:nowrap}
@@ -332,9 +363,8 @@
   .btn:disabled{opacity:.5;cursor:default}
 
   .hint{
-    position:absolute;left:50%;bottom:96px;transform:translateX(-50%);
     font-size:11.5px;letter-spacing:.1em;color:rgba(255,226,190,.36);
-    pointer-events:none;text-align:center;white-space:nowrap;
+    pointer-events:none !important;text-align:center;white-space:nowrap;
     transition:opacity .9s ease;
   }
   /* 默认隐藏 FPS 调试信息（按 Shift+D 或加 ?debug=1 可呼出） */
@@ -414,9 +444,8 @@
   body.intro-open .stepper,
   body.intro-open .top-tools,
   body.intro-open .cam-card,
-  body.intro-open .ritual,
-  body.intro-open .scene-tools,
-  body.intro-open .hint{
+  body.intro-open .bottom-dock,
+  body.intro-open .scene-tools{
     opacity:0 !important;
     pointer-events:none !important;
   }
@@ -493,8 +522,7 @@
 
   body.celebrating .top-tools,
   body.celebrating .scene-tools,
-  body.celebrating .hint,
-  body.celebrating .ritual,
+  body.celebrating .bottom-dock,
   body.celebrating .cam-card{opacity:.12;pointer-events:none}
   body.celebrating .stepper{opacity:.4}
 
@@ -540,9 +568,11 @@
     .cam-head{font-size:9.5px;margin-bottom:7px}
     .status{font-size:10.5px;padding:7px 9px;min-height:30px}
     .meters{display:none}
-    .ritual{bottom:20px;padding:10px 14px;gap:8px;min-height:50px;font-size:12px;border-radius:22px;max-width:calc(100vw - 74px)}
+    .bottom-dock{bottom:16px;gap:7px;max-width:calc(100vw - 74px)}
+    .ritual{padding:10px 14px;gap:8px;min-height:48px;font-size:12px;border-radius:22px}
     .ritual-tip{display:none}
-    .scene-tools{right:12px;bottom:22px}
+    .cam-dock-btn{padding:7px 14px;font-size:11.5px;gap:6px}
+    .scene-tools{right:12px;bottom:18px}
     .fab-btn{width:38px;height:38px}
     .btn{font-size:12px;padding:8px 13px}
     .hint{display:none}
@@ -557,8 +587,8 @@
     .cam-card{width:150px}
     .cam-stage{aspect-ratio:16/10}
     .status{display:none}
-    .ritual{bottom:16px}
-    .scene-tools{bottom:18px}
+    .bottom-dock{bottom:12px;gap:6px}
+    .scene-tools{bottom:14px}
     .gift-card{padding:24px 22px 18px}
   }
 </style>
@@ -577,20 +607,15 @@
   <!-- 步骤条：点燃 → 花束 → 比耶 → 点赞 → 许愿 → 吹灭 -->
   <div class="stepper" id="stepper"></div>
 
-  <!-- 右上角极简胶囊：音乐开关 + 手势控制 -->
+  <!-- 右上角极简音效开关 -->
   <div class="top-tools">
-    <button id="btn-bgm" class="pill-btn" aria-label="开启或关闭背景音乐" title="背景音乐开关">
-      <span class="eq" aria-hidden="true"><i></i><i></i><i></i></span>
-      <span id="bgm-label">音乐</span>
-    </button>
-    <button id="btn-cam" class="pill-btn" aria-label="开启或关闭手势识别" title="使用手势控制蛋糕">
+    <button id="btn-sfx" class="pill-btn sfx-on" aria-label="开启或关闭互动音效" title="互动音效开关">
       <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M18 11V6a2 2 0 0 0-4 0v4"></path>
-        <path d="M14 10V4a2 2 0 0 0-4 0v6"></path>
-        <path d="M10 10.5V6a2 2 0 0 0-4 0v8"></path>
-        <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2a8 8 0 0 1-6.4-3.2L3.8 16a2 2 0 0 1 3.1-2.5L8 14.5"></path>
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+        <path id="sfx-wave-1" d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+        <path id="sfx-wave-2" d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
       </svg>
-      <span id="cam-label">手势控制</span>
+      <span id="sfx-label">音效</span>
     </button>
   </div>
 
@@ -626,7 +651,21 @@
     </div>
   </aside>
 
-  <div class="ritual" id="ritual"></div>
+  <!-- 底部居中操作区：轻提示 + 主仪式胶囊 + 醒目手势开启提醒 -->
+  <div class="bottom-dock" id="bottom-dock">
+    <div id="hint" class="hint">拖拽旋转 · 滚轮缩放 · 点击画面切换扩散 / 聚拢</div>
+    <div class="ritual" id="ritual"></div>
+    <button id="btn-cam" class="cam-dock-btn" aria-label="开启或关闭手势识别" title="开启摄像头，用手势隔空控制蛋糕">
+      <span class="cam-pulse" aria-hidden="true"></span>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M18 11V6a2 2 0 0 0-4 0v4"></path>
+        <path d="M14 10V4a2 2 0 0 0-4 0v6"></path>
+        <path d="M10 10.5V6a2 2 0 0 0-4 0v8"></path>
+        <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2a8 8 0 0 1-6.4-3.2L3.8 16a2 2 0 0 1 3.1-2.5L8 14.5"></path>
+      </svg>
+      <span id="cam-label">开启手势控制，隔空互动更有趣</span>
+    </button>
+  </div>
 
   <!-- 右下角极简折叠菜单：收起次要视角控制按钮 -->
   <div class="scene-tools" id="scene-tools">
@@ -643,7 +682,6 @@
     </button>
   </div>
 
-  <div id="hint" class="hint">拖拽旋转 · 滚轮缩放 · 点击画面切换扩散 / 聚拢</div>
   <div id="fps" class="fps">-- FPS</div>
 </div>
 
@@ -2003,8 +2041,10 @@ const wishBarEl = $('wish-bar');
 const camCardEl = $('cam-card');
 const camCloseBtn = $('cam-close');
 const camLabelEl = $('cam-label');
-const btnBgm = $('btn-bgm');
-const bgmLabelEl = $('bgm-label');
+const btnSfx = $('btn-sfx');
+const sfxLabelEl = $('sfx-label');
+const sfxWave1 = $('sfx-wave-1');
+const sfxWave2 = $('sfx-wave-2');
 const sceneToolsEl = $('scene-tools');
 const btnSceneToggle = $('btn-scene-toggle');
 const toastEl = $('toast');
@@ -2042,49 +2082,23 @@ function setStatus(text, active = false, toast = false) {
 }
 
 /* ============================================================================
-   8.5 声音引擎（Web Audio 水晶八音盒《生日快乐》BGM + 仪式微音效）
-   独立 AudioContext，绝不与麦克风吹气检测冲突；麦克风开启时自动压低音量
+   8.5 互动音效引擎（Web Audio 仪式微音效，无循环背景音乐）
+   独立 AudioContext，不与麦克风吹气检测冲突
    ========================================================================== */
 const SoundEngine = (() => {
   let ctx = null;
   let master = null;
-  let bgmGain = null;
   let sfxGain = null;
   let delayIn = null;
 
-  let enabled = false;
-  let userMuted = false;
-  let ducked = false;
+  let muted = false;
   let hiddenPaused = false;
-  let loopTimer = null;
-  let noteIdx = 0;
 
-  // F 大调 3/4 拍《生日快乐》八音盒谱：[主音 Hz, 拍数, 柔和和弦数组(可选)]
   const N = {
-    Bb2: 116.54, C3: 130.81, F3: 174.61, G3: 196.00, A3: 220.00,
-    C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, G4: 392.00, A4: 440.00, Bb4: 466.16,
-    C5: 523.25, D5: 587.33, E5: 659.25, F5: 698.46, G5: 783.99, A5: 880.00, Bb5: 932.33,
+    F4: 349.23, A4: 440.00,
+    C5: 523.25, E5: 659.25, F5: 698.46, G5: 783.99, A5: 880.00,
     C6: 1046.50
   };
-  const BEAT = 0.62;
-  const SCORE = [
-    // Phrase 1: Happy birthday to you
-    [N.C5, 0.65], [N.C5, 0.35],
-    [N.D5, 1.0, [N.F3, N.C4, N.A4]], [N.C5, 1.0], [N.F5, 1.0],
-    [N.E5, 2.0, [N.C3, N.G3, N.Bb4]], [0, 0.25],
-    // Phrase 2: Happy birthday to you
-    [N.C5, 0.65], [N.C5, 0.35],
-    [N.D5, 1.0, [N.C3, N.G3, N.E4]], [N.C5, 1.0], [N.G5, 1.0],
-    [N.F5, 2.0, [N.F3, N.C4, N.A4]], [0, 0.25],
-    // Phrase 3: Happy birthday dear friend
-    [N.C5, 0.65], [N.C5, 0.35],
-    [N.C6, 1.0, [N.F3, N.A3, N.C4]], [N.A5, 1.0], [N.F5, 1.0],
-    [N.E5, 1.0, [N.Bb2, N.F3, N.D4]], [N.D5, 1.8], [0, 0.25],
-    // Phrase 4: Happy birthday to you
-    [N.Bb5, 0.65], [N.Bb5, 0.35],
-    [N.A5, 1.0, [N.C3, N.A3, N.F4]], [N.F5, 1.0], [N.G5, 1.0, [N.C3, N.G3, N.E4]],
-    [N.F5, 2.6, [N.F3, N.C4, N.A4]], [0, 1.4]
-  ];
 
   function ensure() {
     if (ctx) {
@@ -2099,12 +2113,8 @@ const SoundEngine = (() => {
     master.gain.value = 0.85;
     master.connect(ctx.destination);
 
-    bgmGain = ctx.createGain();
-    bgmGain.gain.value = 0.0001;
-    bgmGain.connect(master);
-
     sfxGain = ctx.createGain();
-    sfxGain.gain.value = 0.42;
+    sfxGain.gain.value = 0.44;
     sfxGain.connect(master);
 
     // 柔和星空回声总线（温润尾音，不刺耳）
@@ -2127,22 +2137,16 @@ const SoundEngine = (() => {
     return ctx;
   }
 
-  function updateBgmVolume(fadeSec = 0.6) {
-    if (!ctx || !bgmGain) return;
-    const target = (enabled && !userMuted && !hiddenPaused) ? (ducked ? 0.14 : 0.34) : 0.0001;
-    const now = ctx.currentTime;
-    bgmGain.gain.cancelScheduledValues(now);
-    bgmGain.gain.setTargetAtTime(target, now, Math.max(0.06, fadeSec / 3));
-  }
-
   function syncBtn() {
-    const active = enabled && !userMuted;
-    btnBgm.classList.toggle('bgm-on', active);
-    bgmLabelEl.textContent = active ? '音乐中' : '已静音';
+    const active = !muted;
+    btnSfx.classList.toggle('sfx-on', active);
+    btnSfx.classList.toggle('muted', !active);
+    sfxLabelEl.textContent = active ? '音效' : '已静音';
+    if (sfxWave1) sfxWave1.style.opacity = active ? '1' : '0.18';
+    if (sfxWave2) sfxWave2.style.opacity = active ? '1' : '0.18';
   }
 
-  /** 单个八音盒音符（基音正弦 + 轻柔高八度泛音） */
-  function playBell(freq, dur, vol = 0.24, dest = bgmGain, delayOffset = 0) {
+  function playBell(freq, dur, vol = 0.22, delayOffset = 0) {
     if (!ctx || !freq) return;
     const t0 = ctx.currentTime + delayOffset;
 
@@ -2164,8 +2168,8 @@ const SoundEngine = (() => {
     osc1.connect(g);
     osc2.connect(g2);
     g2.connect(g);
-    g.connect(dest);
-    if (dest === bgmGain || dest === sfxGain) g.connect(delayIn);
+    g.connect(sfxGain);
+    g.connect(delayIn);
 
     const stopAt = t0 + Math.max(0.55, dur * 1.75);
     osc1.start(t0);
@@ -2174,90 +2178,11 @@ const SoundEngine = (() => {
     osc2.stop(stopAt);
   }
 
-  /** 极柔和低音和弦铺底 */
-  function playPad(freqs, dur) {
-    if (!ctx || !freqs) return;
-    const t0 = ctx.currentTime;
-    const lp = ctx.createBiquadFilter();
-    lp.type = 'lowpass';
-    lp.frequency.value = 900;
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(0.0001, t0);
-    g.gain.linearRampToValueAtTime(0.065, t0 + 0.14);
-    g.gain.exponentialRampToValueAtTime(0.0008, t0 + dur * 1.35);
-    lp.connect(g);
-    g.connect(bgmGain);
-
-    for (const f of freqs) {
-      const osc = ctx.createOscillator();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(f, t0);
-      osc.connect(lp);
-      osc.start(t0);
-      osc.stop(t0 + dur * 1.45);
-    }
-  }
-
-  function scheduleNext() {
-    if (!enabled || userMuted || hiddenPaused) return;
-    const [freq, beats, chord] = SCORE[noteIdx];
-    const dur = beats * BEAT;
-    if (freq > 0) playBell(freq, dur, 0.25, bgmGain, 0);
-    if (chord) playPad(chord, Math.max(dur * 2.2, 1.4));
-    noteIdx = (noteIdx + 1) % SCORE.length;
-    loopTimer = setTimeout(scheduleNext, dur * 1000);
-  }
-
-  function startBgm() {
-    const c = ensure();
-    if (!c) return;
-    enabled = true;
-    userMuted = false;
-    syncBtn();
-    updateBgmVolume(0.9);
-    if (!loopTimer) {
-      noteIdx = 0;
-      loopTimer = setTimeout(scheduleNext, 350);
-    }
-  }
-
-  function toggleBgm() {
-    ensure();
-    if (!enabled) {
-      startBgm();
-      return;
-    }
-    userMuted = !userMuted;
-    syncBtn();
-    updateBgmVolume(0.35);
-    clearTimeout(loopTimer);
-    loopTimer = null;
-    if (!userMuted && !hiddenPaused) {
-      loopTimer = setTimeout(scheduleNext, 180);
-    }
-  }
-
-  function setDuck(on) {
-    ducked = !!on;
-    updateBgmVolume(0.5);
-  }
-
-  function setHidden(hidden) {
-    hiddenPaused = !!hidden;
-    clearTimeout(loopTimer);
-    loopTimer = null;
-    updateBgmVolume(0.25);
-    if (!hidden && enabled && !userMuted) {
-      loopTimer = setTimeout(scheduleNext, 300);
-    }
-  }
-
   function canSfx() {
-    if (userMuted || hiddenPaused) return false;
+    if (muted || hiddenPaused) return false;
     return !!ensure();
   }
 
-  /** 柔和噪声呼气/火花音 */
   function playBreath(dur = 0.55, freq = 950, vol = 0.14) {
     if (!ctx) return;
     const len = Math.floor(ctx.sampleRate * dur);
@@ -2287,16 +2212,27 @@ const SoundEngine = (() => {
 
   function arpeggio(freqs, step = 0.075, vol = 0.2, dur = 0.9) {
     if (!canSfx()) return;
-    freqs.forEach((f, i) => playBell(f, dur, vol, sfxGain, i * step));
+    freqs.forEach((f, i) => playBell(f, dur, vol, i * step));
+  }
+
+  function toggleSfx() {
+    muted = !muted;
+    syncBtn();
+    if (!muted) {
+      ensure();
+      arpeggio([N.A5, N.C6], 0.05, 0.12, 0.45);
+    }
+  }
+
+  function setHidden(hidden) {
+    hiddenPaused = !!hidden;
   }
 
   syncBtn();
   return {
-    startBgm,
-    toggleBgm,
-    setDuck,
+    toggleSfx,
     setHidden,
-    isPlaying: () => enabled && !userMuted,
+    isEnabled: () => !muted,
     sfxIntro: () => arpeggio([N.F4, N.A4, N.C5, N.F5, N.A5], 0.085, 0.22, 1.3),
     sfxIgnite: () => {
       if (!canSfx()) return;
@@ -2478,7 +2414,7 @@ const HAND_CONNECTIONS = [
 ];
 
 function setCamUI(on) {
-  camLabelEl.textContent = on ? '关闭手势' : '手势控制';
+  camLabelEl.textContent = on ? '手势识别已开启 · 点击关闭' : '开启手势控制，隔空互动更有趣';
   btnCam.classList.toggle('on', on);
   camCardEl.classList.toggle('collapsed', !on);
   document.body.classList.toggle('cam-open', on);
@@ -3117,8 +3053,7 @@ function finishWish() {
   setStatus('愿望已封存 ✨ 现在可以吹灭蜡烛了', true);
   syncRitualUI();
 
-  // 进入吹灭环节：自动尝试开启麦克风并柔和压低 BGM，避免干扰收音
-  SoundEngine.setDuck(true);
+  // 进入吹灭环节：自动尝试开启麦克风（被拒绝也不影响按钮兜底）
   enableMic();
 }
 
@@ -3135,7 +3070,6 @@ function blowOut(source) {
   ritual.wishTarget = 0;
   ritual.air = 0;
   stopMic();
-  SoundEngine.setDuck(false);
   SoundEngine.sfxBlow();
 
   // 兜底：确保许愿光环已彻底隐藏（正常流程在 finishWish 里已清）
@@ -3237,11 +3171,8 @@ function syncRitualUI() {
 }
 
 function layoutRitual() {
-  const ritualBottom = window.innerWidth <= 820 ? 20 : 28;
-  ritualEl.style.bottom = ritualBottom + 'px';
-  hintEl.style.bottom = (ritualBottom + ritualEl.offsetHeight + 12) + 'px';
+  // 底部由 .bottom-dock flex 垂直布局自动对齐，无需手工计算偏移
 }
-window.addEventListener('resize', layoutRitual);
 
 ritualEl.addEventListener('click', e => {
   const btn = e.target.closest('[data-act]');
@@ -3253,7 +3184,7 @@ ritualEl.addEventListener('click', e => {
     case 'gather':  gatherBack('按钮'); break;
     case 'wish':    startWish('按钮'); break;
     case 'blow':    blowOut('按钮'); break;
-    case 'mic':     SoundEngine.setDuck(true); enableMic(); break;
+    case 'mic':     enableMic(); break;
   }
 });
 
@@ -3570,12 +3501,10 @@ function enterExperience() {
   introEl.classList.add('hide');
   setTimeout(() => { introEl.style.display = 'none'; }, 900);
   SoundEngine.sfxIntro();
-  SoundEngine.startBgm();
-  requestAnimationFrame(layoutRitual);
 }
 
 btnEnter.addEventListener('click', enterExperience);
-btnBgm.addEventListener('click', () => SoundEngine.toggleBgm());
+btnSfx.addEventListener('click', () => SoundEngine.toggleSfx());
 document.addEventListener('keydown', e => {
   if (!entered && (e.key === 'Enter' || e.key === ' ')) {
     e.preventDefault();
