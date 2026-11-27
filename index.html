@@ -2574,7 +2574,7 @@ function analyzeHand(lm) {
   const thumbExt = d(4, 17) / palm > 1.08;
 
   const opennessRaw = clamp01((ext + (thumbExt ? 1 : 0)) / 5);
-  const pinchRaw = clamp01((0.62 - d(4, 8) / palm) / 0.42);
+  const pinchRaw = clamp01((0.66 - d(4, 8) / palm) / 0.42);
 
   // ☝🏻 比 1：仅食指伸直，中/无名/小指明确收拢（拇指自然收拢，不作要求）
   const oneFinger = indexExt && !middleExt && !ringExt && !pinkyExt;
@@ -2598,9 +2598,16 @@ function analyzeHand(lm) {
   gesture.pinch = damp(gesture.pinch, pinchRaw, 9, 1 / 30);
 
   // 照片星环阶段锁定最大分散；花束变形期间不插手，让形态干净地过渡
+  // 修复：捏合时主动把粒子聚拢回蛋糕（以前 pinch>=0.6 时直接跳过更新，导致从张掌切到捏合后卡死在散开态）
   const shapeStages = ritual.stage === 'lit' || ritual.stage === 'bouquet' || ritual.stage === 'posed';
-  if (gesture.pinch < 0.6 && !shapeStages) {
-    state.spreadTarget = clamp01((gesture.openness - 0.32) / 0.56);
+  if (!shapeStages) {
+    const openSpread = clamp01((gesture.openness - 0.32) / 0.56);
+    if (gesture.pinch >= 0.52) {
+      const pinchGather = clamp01(1 - (gesture.pinch - 0.48) / 0.28);
+      state.spreadTarget = Math.min(openSpread, pinchGather);
+    } else {
+      state.spreadTarget = openSpread;
+    }
   }
 
   const cx = (lm[0].x + lm[5].x + lm[9].x + lm[13].x + lm[17].x) / 5;
@@ -2622,7 +2629,9 @@ function analyzeHand(lm) {
   // 状态文案：每个手势的保持进度都要有反馈；吹蜡烛/许愿倒计时阶段不覆盖状态栏
   if (ritual.stage !== 'ready' && ritual.stage !== 'wishing' && ritual.stage !== 'blown') {
     let label;
-    if (ritual.stage === 'lit' && oneFinger) {
+    if (ritual.stage === 'unlit' && gesture.pinch > 0.58) {
+      label = `检测到：捏合聚拢 · 保持 ${pct(ritual.holdPinch / 0.8)}% 点燃蜡烛`;
+    } else if (ritual.stage === 'lit' && oneFinger) {
       label = `检测到：比 1 ☝🏻 · 保持 ${pct(ritual.holdFinger / FINGER_HOLD)}% 变花束`;
     } else if (ritual.stage === 'bouquet' && peace) {
       label = `检测到：比耶 ✌🏻 · 保持 ${pct(ritual.holdPeace / PEACE_HOLD)}% 展开照片`;
@@ -2636,8 +2645,8 @@ function analyzeHand(lm) {
       label = '比个 1 ☝🏻 变出花束';
     } else if (ritual.stage === 'gathered') {
       label = '闭上眼睛，默念你的心愿 · 点下方按钮许愿';
-    } else if (gesture.pinch > 0.62) {
-      label = `检测到：捏合 · 拉近 ${Math.round(gesture.pinch * 100)}%`;
+    } else if (gesture.pinch > 0.58) {
+      label = `检测到：捏合聚拢 · 拉近 ${Math.round(gesture.pinch * 100)}%`;
     } else if (gesture.openness > 0.74) {
       label = `检测到：张开手掌 · 扩散 ${Math.round(state.spreadTarget * 100)}%`;
     } else if (gesture.openness < 0.3) {
@@ -2656,9 +2665,11 @@ function analyzeHand(lm) {
 function updateRitualGestures(dt) {
   if (ritual.leaving) return;
 
-  // ① 捏合保持 0.8 秒 → 点燃
+  // ① 捏合保持 0.8 秒 → 聚拢并点燃（温和衰减容忍单帧抖动，不再一帧清零）
   if (ritual.stage === 'unlit') {
-    ritual.holdPinch = gesture.pinch > 0.7 ? ritual.holdPinch + dt : 0;
+    ritual.holdPinch = gesture.pinch > 0.58
+      ? ritual.holdPinch + dt
+      : Math.max(0, ritual.holdPinch - dt * 1.6);
     if (ritual.holdPinch >= 0.8) {
       ritual.holdPinch = 0;
       igniteCandle('捏合手势');
@@ -2667,7 +2678,9 @@ function updateRitualGestures(dt) {
 
   // ② 比 1（只伸食指）保持 0.7 秒 → 变成花束
   if (ritual.stage === 'lit') {
-    ritual.holdFinger = gesture.oneFinger ? ritual.holdFinger + dt : 0;
+    ritual.holdFinger = gesture.oneFinger
+      ? ritual.holdFinger + dt
+      : Math.max(0, ritual.holdFinger - dt * 1.6);
     if (ritual.holdFinger >= FINGER_HOLD) {
       ritual.holdFinger = 0;
       bouquetMorph('比 1 手势');
@@ -2676,7 +2689,9 @@ function updateRitualGestures(dt) {
 
   // ③ 比耶保持 0.7 秒 → 花束散成星空 + 照片
   if (ritual.stage === 'bouquet') {
-    ritual.holdPeace = gesture.peace ? ritual.holdPeace + dt : 0;
+    ritual.holdPeace = gesture.peace
+      ? ritual.holdPeace + dt
+      : Math.max(0, ritual.holdPeace - dt * 1.6);
     if (ritual.holdPeace >= PEACE_HOLD) {
       ritual.holdPeace = 0;
       posePhotos('比耶手势');
@@ -2685,7 +2700,9 @@ function updateRitualGestures(dt) {
 
   // ④ 点赞保持 0.7 秒 → 聚拢回蛋糕
   if (ritual.stage === 'posed') {
-    ritual.holdThumb = gesture.thumbsUp ? ritual.holdThumb + dt : 0;
+    ritual.holdThumb = gesture.thumbsUp
+      ? ritual.holdThumb + dt
+      : Math.max(0, ritual.holdThumb - dt * 1.6);
     if (ritual.holdThumb >= THUMB_HOLD) {
       ritual.holdThumb = 0;
       gatherBack('点赞手势');
@@ -2934,6 +2951,9 @@ function igniteCandle(source) {
   ritual.smoke = 0;
   ritual.holdPinch = 0;
   ritual.holdFinger = 0;
+  // 确保点燃蜡烛时粒子一定完整聚拢成蛋糕（避免之前张掌扩散后切进 lit 阶段卡在散开态）
+  state.spreadTarget = 0;
+  state.bouquetTarget = 0;
   SoundEngine.sfxIgnite();
   setStatus(`蜡烛已点燃（${source}）· 比个 1 ☝🏻 变出花束`, true);
   syncRitualUI();
